@@ -1,54 +1,100 @@
 import React, { useState } from 'react';
+import { Toaster, toast } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import About from './components/About';
 import Footer from './components/Footer';
 import Login from './components/Login';
-import Signup from './components/SignUp'; // ✅ Correct import (uppercase 'U')
+import SignUp from './components/SignUp';
+import Dashboard from './components/Dashboard';
+import api from './utility/api';
 
 function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSignupOpen, setIsSignupOpen] = useState(false); // ✅ Signup modal state
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userData, setUserData] = useState(null);
 
-  // ✅ Handle login form submission
-  const handleLogin = async ({ email, password }) => {
-    console.log("Login Submitted", email, password);
-    setIsLoginOpen(false);
+  // On successful login
+  const handleLoginSuccess = async ({ email, password }) => {
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      if (res.data.success) {
+        // Fetch user data after login
+        const userRes = await api.get('/user/data');
+        if (userRes.data.success) {
+          setUserData(userRes.data.userData);
+          setIsAuthenticated(true);
+          setIsLoginOpen(false);
+          toast.success("Login successful!");
+        } else {
+          toast.error("Failed to fetch user data");
+        }
+      } else {
+        toast.error(res.data.message || "Login failed");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Login request failed");
+    }
   };
 
-  // ✅ Handle signup form submission
-  const handleSignup = async (data) => {
-    console.log("Signup Submitted", data);
+  // On successful signup
+  const handleSignupSuccess = () => {
     setIsSignupOpen(false);
+    toast.success("Account created! You can now login.");
+    setIsLoginOpen(true); // Auto open login modal
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    await api.post('/auth/logout');
+    setIsAuthenticated(false);
+    setUserData(null);
+    toast.success('Logged out');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ✅ Navbar with Login and Signup triggers */}
-      <Navbar 
-        onLoginClick={() => setIsLoginOpen(true)} 
-        onSignupClick={() => setIsSignupOpen(true)} 
+    <div className="relative">
+      <Toaster position="top-center" reverseOrder={false} />
+
+      <Navbar
+        loggedIn={isAuthenticated}
+        onLoginClick={() => setIsLoginOpen(true)}
+        onSignupClick={() => setIsSignupOpen(true)}
+        onLogout={handleLogout}
       />
 
-      {/* 📌 Main Landing Sections */}
-      <Hero />
-      <Features />
-      <About />
-      <Footer />
+      {/* Main Content */}
+      {isAuthenticated && userData ? (
+        <Dashboard user={userData} onLogout={handleLogout} />
+      ) : (
+        <>
+          <Hero />
+          <Features />
+          <About />
+          <Footer />
+        </>
+      )}
 
-      {/* ✅ Login Modal */}
+      {/* Login Modal */}
       <Login
         open={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
-        onLogin={handleLogin}
+        onLogin={handleLoginSuccess}
+        onSignupClick={() => {
+          setIsLoginOpen(false);
+          setIsSignupOpen(true);
+        }}
       />
 
-      {/* ✅ Signup Modal */}
-      <Signup
+      {/* Signup Modal */}
+      <SignUp
         open={isSignupOpen}
         onClose={() => setIsSignupOpen(false)}
-        onSubmit={handleSignup}
+        onSubmit={handleSignupSuccess}
+        onLoginClick={() => setIsLoginOpen(true)}
       />
     </div>
   );
