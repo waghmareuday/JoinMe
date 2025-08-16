@@ -19,5 +19,10 @@ authRouter.post('/send-forget-otp', sendResetOTP);
 authRouter.post('/verify-reset-otp', verifyOnlyOTP);
 authRouter.post('/reset-password', resetPassword);
 
+authRouter.get('/check-auth', userAuth, (req, res) => {
+  return res.json({ success: true });
+});
+
+
 
 export default authRouter;

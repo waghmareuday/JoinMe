@@ -38,7 +38,7 @@ const Login = ({ open, onClose, onLogin, onSignupClick }) => {
     setLoading(true);
 
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('/auth/login', { email, password, rememberMe});
 
       if (res.data.success) {
         toast.success('Login successful!');

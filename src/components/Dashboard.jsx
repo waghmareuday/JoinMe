@@ -1,143 +1,91 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Users, MapPin, LogOut, Film, Car, Calendar, Shield, PlusCircle, Star
-} from 'lucide-react';
-import api from '../utility/api';
-import { toast } from 'react-hot-toast';
+import React, { useState } from 'react';
+import EventCard from './EventCard';
+import Sidebar from './Sidebar';
+import PostEventModal from './PostEventModal';
+import turfImg from '../assets/turf.png';
+import footballImg from '../assets/football.png';
+import volleyballImg from '../assets/volleyball.png';
+import movieImg from '../assets/movie.png';
+import tripImg from '../assets/trip.png';
+import carpoolingImg from '../assets/carpooling.png';
+import EventBoard from './EventBoard';
+import { PlusCircle } from 'lucide-react';
 
-const sectionImages = {
-  turf: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
-  movie: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=600&q=80",
-  ride: "https://images.unsplash.com/photo-1511918984145-48de785d4c4e?auto=format&fit=crop&w=600&q=80",
-  events: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=600&q=80",
-  location: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=600&q=80",
-  safe: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=600&q=80"
-};
+const slogans = [
+  "Let's make new memories today!",
+  "Find your perfect partner for the moment!",
+  "Because shared moments matter."
+];
 
-const Dashboard = ({ user, onLogout }) => {
-  const [city, setCity] = useState(user.city);
-  const [events, setEvents] = useState([]);
-  const [newPost, setNewPost] = useState({ title: '', description: '', section: 'turf' });
+const eventData = [
+  { title: "Cricket at Central Turf", bgImage: turfImg, category: "Cricket" },
+  { title: "Football at Stadium", bgImage: footballImg, category: "Football" },
+  { title: "Volleyball at Beach Court", bgImage: volleyballImg, category: "Volleyball" },
+  { title: "Movie Night: Interstellar", bgImage: movieImg, category: "Movie" },
+  { title: "Trip to Lonavala", bgImage: tripImg, category: "Trip Buddy" },
+  { title: "Pune to Nagpur Ride", bgImage: carpoolingImg, category: "Ride Sharing" },
+];
 
-  useEffect(() => {
-    fetchEvents();
-  }, [city]);
-
-  const fetchEvents = async () => {
-    try {
-      const res = await api.get(`/events?city=${city}`);
-      if (res.data.success) setEvents(res.data.events);
-      else toast.error(res.data.message || 'Failed to fetch events');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to fetch events');
-    }
-  };
-
-  const handlePostSubmit = async () => {
-    if (!newPost.title || !newPost.description) {
-      toast.error("Please fill all fields");
-      return;
-    }
-    try {
-      const res = await api.post('/events/create', {
-        ...newPost,
-        city,
-        postedBy: user.name
-      });
-      if (res.data.success) {
-        toast.success('Event posted!');
-        fetchEvents();
-        setNewPost({ title: '', description: '', section: 'turf' });
-      } else {
-        toast.error(res.data.message);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Post failed");
-    }
-  };
+const Dashboard = ({ user }) => {
+  const slogan = slogans[Math.floor(Math.random() * slogans.length)];
+  const firstName = user?.name?.split(' ')[0] || 'User';
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [openPostModal, setOpenPostModal] = useState(false);
 
   return (
-    <div className="min-h-screen px-4 sm:px-10 bg-gradient-to-br from-white to-slate-100 py-32">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-800">
-          Welcome, <span className="text-purple-600">{user.name}</span>
-        </h1>
-        <button
-          onClick={onLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-600"
-        >
-          <LogOut size={18} /> Logout
-        </button>
-      </div>
+    <div className="flex bg-gradient-to-br from-indigo-100 to-purple-200 min-h-screen pt-16">
+      <Sidebar />
 
-      <div className="mb-6">
-        <label className="text-gray-700 font-semibold">Your City: </label>
-        <select
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          className="ml-2 border px-3 py-1 rounded"
-        >
-          {[user.city, 'Mumbai', 'Delhi', 'Pune', 'Chennai', 'Hyderabad'].filter((v, i, a) => a.indexOf(v) === i).map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mb-10">
-        <h2 className="text-xl font-bold mb-4">Create New Post</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input
-            type="text"
-            placeholder="Title"
-            value={newPost.title}
-            onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-            className="border px-3 py-2 rounded"
-          />
-          <select
-            value={newPost.section}
-            onChange={(e) => setNewPost({ ...newPost, section: e.target.value })}
-            className="border px-3 py-2 rounded"
-          >
-            {Object.keys(sectionImages).map(key => (
-              <option key={key} value={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Description"
-            value={newPost.description}
-            onChange={(e) => setNewPost({ ...newPost, description: e.target.value })}
-            className="border px-3 py-2 rounded"
-          />
+      <main className="flex-1 p-6 sm:p-10 overflow-y-auto relative">
+        {/* Greeting */}
+        <div className="mb-10">
+          <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-700 drop-shadow-sm">
+            Welcome, {firstName} 👋
+          </h1>
+          <p className="text-xl text-gray-600 mt-2 italic tracking-wide">{slogan}</p>
         </div>
-        <button
-          onClick={handlePostSubmit}
-          className="mt-4 px-5 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:scale-105 transition"
-        >
-          Post
-        </button>
-      </div>
 
-      <div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Recent Posts in {city}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event, i) => (
-            <div key={i} className="bg-white rounded-xl overflow-hidden shadow hover:shadow-lg transition">
-              <img src={sectionImages[event.section] || sectionImages.safe} alt={event.section} className="h-40 w-full object-cover" />
-              <div className="p-4">
-                <h3 className="text-lg font-bold text-blue-700">{event.title}</h3>
-                <p className="text-sm text-gray-600 mt-1">{event.description}</p>
-                <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                  <MapPin size={14} /> {event.city} • Posted by {event.postedBy}
-                </div>
-              </div>
-            </div>
+        {/* Category Cards */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          {eventData.map((event, idx) => (
+            <EventCard
+              key={idx}
+              title={event.title}
+              bgImage={event.bgImage}
+              onClick={() => setSelectedEvent(event)}
+            />
           ))}
-        </div>
-        {events.length === 0 && <p className="text-gray-500 mt-4">No posts yet.</p>}
-      </div>
+        </section>
+
+        {/* EventBoard with real-time updates */}
+        <EventBoard />
+
+        {/* Floating Add Button */}
+        <button
+          onClick={() => setOpenPostModal(true)}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition"
+        >
+          <PlusCircle size={20} /> Post Event
+        </button>
+
+        {/* Post Modal from Card Click */}
+        {selectedEvent && (
+          <PostEventModal
+            open={!!selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+            defaultCategory={selectedEvent.category}
+            defaultTitle={selectedEvent.title}
+          />
+        )}
+
+        {/* Post Modal from Floating Button */}
+        {openPostModal && (
+          <PostEventModal
+            open={openPostModal}
+            onClose={() => setOpenPostModal(false)}
+          />
+        )}
+      </main>
     </div>
   );
 };

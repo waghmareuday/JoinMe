@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -9,50 +9,74 @@ import Login from './components/Login';
 import SignUp from './components/SignUp';
 import Dashboard from './components/Dashboard';
 import api from './utility/api';
+import { useContext } from 'react';
+import { UserContext } from './context/userContext';
+
 
 function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userData, setUserData] = useState(null);
+  const { setUser } = useContext(UserContext);
 
-  // On successful login
-  const handleLoginSuccess = async ({ email, password }) => {
-    try {
-      const res = await api.post('/auth/login', { email, password });
-      if (res.data.success) {
-        // Fetch user data after login
-        const userRes = await api.get('/user/data');
-        if (userRes.data.success) {
-          setUserData(userRes.data.userData);
-          setIsAuthenticated(true);
-          setIsLoginOpen(false);
-          toast.success("Login successful!");
-        } else {
-          toast.error("Failed to fetch user data");
+  // ✅ Check auth status on first load (auto login if rememberMe worked)
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await api.get('/auth/check-auth'); // must return { success: true }
+        if (res.data.success) {
+          const userRes = await api.get('/user/data');
+          if (userRes.data.success) {
+            setUserData(userRes.data.userData);
+            setIsAuthenticated(true);
+          }
         }
-      } else {
-        toast.error(res.data.message || "Login failed");
+      } catch (err) {
+        console.log("User not logged in");
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Login request failed");
-    }
-  };
+    };
 
-  // On successful signup
+    checkAuth();
+  }, []);
+
+  // ✅ On successful login
+const handleLoginSuccess = async ({ email, password }) => {
+  try {
+    const userRes = await api.get('/user/data');
+    if (userRes.data.success) {
+      setUserData(userRes.data.userData);
+      setUser(userRes.data.userData); // 👈 This makes user available globally
+      setIsAuthenticated(true);
+      setIsLoginOpen(false);
+      toast.success("Login successful!");
+    } else {
+      toast.error("Failed to fetch user data");
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("Login request failed");
+  }
+};
+
+
+  // ✅ On successful signup
   const handleSignupSuccess = () => {
     setIsSignupOpen(false);
     toast.success("Account created! You can now login.");
     setIsLoginOpen(true); // Auto open login modal
   };
 
-  // Handle logout
+  // ✅ Handle logout
   const handleLogout = async () => {
-    await api.post('/auth/logout');
-    setIsAuthenticated(false);
-    setUserData(null);
-    toast.success('Logged out');
+    try {
+      await api.post('/auth/logout');
+      setIsAuthenticated(false);
+      setUserData(null);
+      toast.success('Logged out');
+    } catch (err) {
+      toast.error('Logout failed');
+    }
   };
 
   return (
