@@ -95,7 +95,7 @@ const Hero = () => {
             <div className="bg-white/90 border border-blue-100 rounded-xl p-6 shadow hover:shadow-xl transition backdrop-blur">
               <div className="flex items-center gap-3 mb-2">
                 <Users2 className="h-6 w-6 text-blue-600" />
-                <h3 className="text-lg font-semibold text-blue-800">50K+ Users</h3>
+                <h3 className="text-lg font-semibold text-blue-800">50+ Users</h3>
               </div>
               <p className="text-gray-700 text-sm">A growing community ready to connect</p>
             </div>
