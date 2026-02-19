@@ -1,7 +1,6 @@
 import express from 'express';
 import { isAuthenticated, login, logout, register, resetPassword, sendOTPEmail, sendResetOTP, verifyOnlyOTP, verifyOTP } from '../controllers/authController.js';
 import userAuth from '../middleware/userAuth.js';
-import { send } from 'vite';
 import jwt from 'jsonwebtoken';
 
 
