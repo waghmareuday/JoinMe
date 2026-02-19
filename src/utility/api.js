@@ -2,7 +2,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api', // update if using a different port
+  baseURL: import.meta.env.VITE_API_URL + '/api', // update if using a different port
   withCredentials: true,
 });
 

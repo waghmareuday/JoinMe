@@ -210,7 +210,7 @@ export const sendEventCompletedEmail = async (to, userName, eventDetails) => {
               <p style="font-size: 16px; color: #374151; margin-bottom: 25px;">The match for <strong>${title}</strong> has officially ended! To keep our community safe and reliable, please take a quick moment to rate <strong>${hostName}</strong>.</p>
 
               <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
-                <a href="http://localhost:5173/dashboard" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);">Rate Host on Dashboard</a>
+                <a href="https://joinme-theta.vercel.app/dashboard" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);">Rate Host on Dashboard</a>
               </div>
             </div>
 
@@ -258,7 +258,7 @@ export const sendEventCancelledEmail = async (to, userName, eventDetails, cancel
               </div>
 
               <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
-                <a href="http://localhost:5173/features" style="display: inline-block; background-color: #1e293b; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Find New Events</a>
+                <a href="https://joinme-theta.vercel.app/dashboard" style="display: inline-block; background-color: #1e293b; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Find New Events</a>
               </div>
             </div>
 
