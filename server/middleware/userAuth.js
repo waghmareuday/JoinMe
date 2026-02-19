@@ -4,7 +4,7 @@ const userAuth = (req, res, next) => {
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
 
     if (!token) {
-        return res.json({ success: false, message: 'Unauthorized access' });
+        return res.status(401).json({ success: false, message: 'Unauthorized access' });
     }
 
     try {
@@ -12,7 +12,8 @@ const userAuth = (req, res, next) => {
         req.user = decoded;
         next();
     } catch (error) {
-        return res.json({ success: false, message: 'Invalid token' });
+        console.error('userAuth error:', error);
+        return res.status(401).json({ success: false, message: 'Invalid token' });
     }
 }
 

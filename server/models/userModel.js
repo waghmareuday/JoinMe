@@ -52,6 +52,26 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    
+    // 🟢 NEW: TRUST & PROFILE SYSTEM FIELDS
+    bio: {
+        type: String,
+        default: "Hey there! I'm looking forward to meeting new people and joining great events.",
+        maxLength: 150
+    },
+    avatar: {
+        type: String,
+        default: "" // We will generate a sleek initial-based avatar or let them upload one
+    },
+    averageRating: {
+        type: Number,
+        default: 0 // Will hold the 1-5 star average
+    },
+    totalRatings: {
+        type: Number,
+        default: 0 // How many people have rated this user
+    },
+
     createdAt: {
         type: Date,
         default: Date.now,
@@ -60,4 +80,3 @@ const userSchema = new mongoose.Schema({
 
 const userModel = mongoose.models.user || mongoose.model('user', userSchema);
 export default userModel;
-

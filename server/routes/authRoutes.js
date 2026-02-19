@@ -20,7 +20,7 @@ authRouter.post('/verify-reset-otp', verifyOnlyOTP);
 authRouter.post('/reset-password', resetPassword);
 
 authRouter.get('/check-auth', userAuth, (req, res) => {
-  return res.json({ success: true });
+  return res.status(200).json({ success: true });
 });
 
 

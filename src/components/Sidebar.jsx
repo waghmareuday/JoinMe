@@ -7,7 +7,7 @@ const cities = [
   "Nagpur", "Pune", "Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Ahmedabad", "Chennai", "Kolkata", "Jaipur"
 ];
 
-const Sidebar = ({ onCityChange }) => {
+const Sidebar = ({ onCityChange, onCategorySelect, categoryCounts = [] }) => {
   const { user } = useUser(); // safer and recommended
   const defaultCity = user?.city || 'Nagpur';
   const [selectedCity, setSelectedCity] = useState(defaultCity);
@@ -64,24 +64,16 @@ const Sidebar = ({ onCityChange }) => {
         <div>
           <h3 className="text-md font-bold text-gray-700 mb-3">Categories</h3>
           <ul className="space-y-3 text-sm">
-            <li className="flex items-center gap-2 text-blue-700 hover:text-blue-900 cursor-pointer">
-              <Trophy size={18} /> Cricket
+            <li className="flex items-center justify-between gap-2 text-gray-700 hover:text-gray-900 cursor-pointer" onClick={() => onCategorySelect && onCategorySelect('All')}>
+              <div className="flex items-center gap-2"><Trophy size={18} /> All</div>
+              <span className="text-xs text-gray-500">{categoryCounts.reduce((s, c) => s + c.count, 0) || '—'}</span>
             </li>
-            <li className="flex items-center gap-2 text-blue-700 hover:text-blue-900 cursor-pointer">
-              <Trophy size={18} /> Football
-            </li>
-            <li className="flex items-center gap-2 text-blue-700 hover:text-blue-900 cursor-pointer">
-              <Trophy size={18} /> Volleyball
-            </li>
-            <li className="flex items-center gap-2 text-purple-700 hover:text-purple-900 cursor-pointer">
-              <Film size={18} /> Movie
-            </li>
-            <li className="flex items-center gap-2 text-purple-700 hover:text-purple-900 cursor-pointer">
-              <Car size={18} /> Ride Sharing
-            </li>
-            <li className="flex items-center gap-2 text-purple-700 hover:text-purple-900 cursor-pointer">
-              <Users size={18} /> Trip Buddy
-            </li>
+            {categoryCounts.map(c => (
+              <li key={c.category} className="flex items-center justify-between gap-2 text-blue-700 hover:text-blue-900 cursor-pointer" onClick={() => onCategorySelect && onCategorySelect(c.category)}>
+                <div className="flex items-center gap-2"><Trophy size={18} /> {c.category}</div>
+                <span className="text-xs text-gray-500">{c.count} live</span>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

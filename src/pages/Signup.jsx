@@ -1,5 +1,38 @@
-export { default } from '../pages/Signup';
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import Select from 'react-select';
+import api from '../utility/api';
+import { useUser } from '../context/userContext';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+
+const indiaCities = [
+  "Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Ahmedabad", "Chennai",
+  "Kolkata", "Pune", "Jaipur", "Lucknow", "Nagpur", "Indore", "Bhopal",
+  "Patna", "Ludhiana", "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot"
+];
+
+const cityOptions = indiaCities.map(city => ({ label: city, value: city }));
+
+const SignUp = () => {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    gender: '',
+    age: '',
+    city: '',
+    profession: '',
+    password: ''
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpSent, setOtpSent] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [timer, setTimer] = useState(300);
+  const { setUser } = useUser();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (otpSent && timer > 0) {
@@ -70,7 +103,6 @@ import toast from 'react-hot-toast';
 
       if (registerRes.data.success) {
         toast.success("Registration successful!");
-        // Auto-login / redirect to dashboard
         const userData = registerRes.data.user || { email: formData.email };
         try { setUser(userData); } catch (e) { }
         navigate('/dashboard');

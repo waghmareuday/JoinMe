@@ -1,68 +1,50 @@
 import mongoose from 'mongoose';
 
-const eventSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
+const EventSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String },
+  category: { type: String, required: true },
+  city: { type: String, required: true },
+  venue: { type: String, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },
+  
+  requiredPeople: { type: Number, required: true },
+  
+  requests: [{
+    user: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'user' // 🟢 CHANGED TO LOWERCASE 'user'
+    },
+    status: { 
+      type: String, 
+      enum: ['pending', 'approved', 'rejected'], 
+      default: 'pending' 
+    },
+    requestedAt: { type: Date, default: Date.now }
+  }],
+  
+  isPaid: { type: Boolean, default: false },
+  amount: { type: Number, default: 0 },
+  notes: { type: String }, 
+  creator: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'user' // 🟢 CHANGED TO LOWERCASE 'user'
   },
-  email: {  // Event creator
-    type: String,
-    required: true,
-  },
-  category: {
-    type: String,
-    enum: ['cricket', 'football', 'volleyball', 'movie', 'ride', 'trip'],
-    required: true,
-  },
-  title: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  description: String,
-
-  // 👇 This is the actual event date & time
-  eventDateTime: {
-    type: Date,
-    required: true,
-  },
-
-  venue: String,
-  requiredPeople: {
-    type: Number,
-    required: true,
-  },
-  joinedUsers: {
-    type: [String], // email IDs
-    default: [],
-  },
-  paymentRequired: {
-    type: Boolean,
-    default: false,
-  },
-  amount: {
-    type: Number,
-    default: 0,
-  },
-  contactPreference: {
-    type: String,
-    enum: ['chat', 'mobile', 'both'],
-    default: 'chat',
-  },
-  contactNumber: {
-    type: String,
-  },
+  
+  // 🟢 NEW: EVENT COMPLETION & RATING TRACKING
   status: {
     type: String,
-    enum: ['live', 'full', 'expired'],
-    default: 'live',
+    enum: ['upcoming', 'completed', 'cancelled'],
+    default: 'upcoming'
   },
+  ratedBy: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'user' // 🟢 CHANGED TO LOWERCASE 'user'
+  }], 
 
-  // 👇 This is auto-set when event is posted
-  datePosted: {
-    type: Date,
-    default: Date.now,
-  },
+  createdAt: { type: Date, default: Date.now }
 });
 
-export default mongoose.model('eventModel', eventSchema);
+const Event = mongoose.model('Event', EventSchema);
+export default Event;

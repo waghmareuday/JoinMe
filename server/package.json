@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "migrate-test-to-joinme": "node scripts/migrate_test_to_joinme.js",
+    "drop-test-db": "node scripts/drop_test_db.js --drop"
   },
   "author": "",
   "license": "ISC",
@@ -18,7 +20,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.0",
-    "nodemailer": "^7.0.3"
+    "nodemailer": "^7.0.3",
+    "stripe": "^20.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

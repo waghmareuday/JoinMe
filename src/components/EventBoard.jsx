@@ -3,16 +3,22 @@ import React, { useEffect, useState } from 'react';
 import { Calendar, MapPin, Users, PlusCircle } from 'lucide-react';
 import PostEventModal from './PostEventModal';
 import api from '../utility/api';
+import EventCard from './EventCard';
+import { useUser } from '../context/userContext';
 
-const EventBoard = () => {
+const EventBoard = ({ selectedCity = '' }) => {
+  const { user } = useUser();
   const [events, setEvents] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [refresh, setRefresh] = useState(false);
+  const [joining, setJoining] = useState(null);
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (city = '') => {
     try {
-      const res = await api.get('/event/all');
-      if (res.data.success) {
+      const q = new URLSearchParams();
+      if (city) q.set('city', city);
+      const res = await api.get(`/event/all?${q.toString()}`);
+      if (res.data && res.data.success) {
         setEvents(res.data.events);
       }
     } catch (err) {
@@ -21,13 +27,13 @@ const EventBoard = () => {
   };
 
   useEffect(() => {
-    fetchEvents();
-  }, [refresh]);
+    fetchEvents(selectedCity);
+  }, [refresh, selectedCity]);
 
   useEffect(() => {
-    const interval = setInterval(fetchEvents, 5000);
+    const interval = setInterval(() => fetchEvents(selectedCity), 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedCity]);
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4 sm:px-10">
@@ -42,22 +48,35 @@ const EventBoard = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {events.length === 0 ? (
             <p className="text-gray-500">No events posted yet.</p>
           ) : (
             events.map(event => (
-              <div key={event._id} className="bg-white shadow-md rounded-xl p-5 hover:shadow-lg transition cursor-pointer">
-                <h2 className="text-xl font-bold text-blue-600 mb-2">{event.title}</h2>
-                <p className="text-sm text-gray-600 mb-3">
-                  {event.description?.substring(0, 100) || 'No description provided.'}
-                </p>
-                <div className="text-sm text-gray-700 space-y-1">
-                  <p className="flex items-center gap-2"><Calendar size={16} /> {event.date} at {event.time}</p>
-                  <p className="flex items-center gap-2"><MapPin size={16} /> {event.venue}</p>
-                  <p className="flex items-center gap-2"><Users size={16} /> Needed: {event.requiredPeople}</p>
-                </div>
-              </div>
+              <EventCard
+                key={event._id}
+                event={event}
+                bgImage={event.image}
+                onClick={() => setModalOpen(true)}
+                onJoin={async (eventId) => {
+                  if (!user) {
+                    return alert('Please login to join events.');
+                  }
+                  try {
+                    setJoining(eventId);
+                    const res = await api.post('/event/join', { eventId });
+                    if (res.data && res.data.success) {
+                      // Update local list: decrement requiredPeople
+                      setEvents(prev => prev.map(ev => ev._id === eventId ? { ...ev, requiredPeople: res.data.remainingSlots } : ev));
+                    }
+                  } catch (err) {
+                    console.error('Join failed', err);
+                  } finally {
+                    setJoining(null);
+                  }
+                }}
+                joining={joining === event._id}
+              />
             ))
           )}
         </div>

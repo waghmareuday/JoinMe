@@ -11,7 +11,11 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+import { useUser } from '../context/userContext';
+
 const Footer = () => {
+  const { user } = useUser();
+
   const quickLinks = [
     { name: 'Home', href: '#home' },
     { name: 'Features', href: '#features' },
@@ -42,28 +46,30 @@ const Footer = () => {
 
   return (
     <footer className="bg-gray-950 text-white">
-      {/* Newsletter Section */}
-      <div className="bg-gradient-to-r from-blue-700 to-purple-700 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h3 className="text-3xl font-bold mb-2 tracking-tight">Stay Connected</h3>
-            <p className="text-blue-100 mb-8 text-lg">
-              Get the latest updates, tips, and exclusive offers delivered to your inbox.
-            </p>
-            <form className="flex flex-col sm:flex-row max-w-md mx-auto gap-4">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-3 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 border border-gray-300"
-              />
-              <button className="bg-white text-blue-700 px-6 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center space-x-2 shadow">
-                <span>Subscribe</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </form>
+      {/* Newsletter Section (visible only for guests) */}
+      {!user && (
+        <div className="bg-gradient-to-r from-blue-700 to-purple-700 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h3 className="text-3xl font-bold mb-2 tracking-tight">Stay Connected</h3>
+              <p className="text-blue-100 mb-8 text-lg">
+                Get the latest updates, tips, and exclusive offers delivered to your inbox.
+              </p>
+              <form className="flex flex-col sm:flex-row max-w-md mx-auto gap-4">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="flex-1 px-4 py-3 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 border border-gray-300"
+                />
+                <button className="bg-white text-blue-700 px-6 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center space-x-2 shadow">
+                  <span>Subscribe</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Footer Content */}
       <div className="py-16">

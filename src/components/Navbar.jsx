@@ -1,123 +1,236 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, Users, UserCircle2, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Menu, X, Users, LogOut, User, LayoutDashboard, Star, ChevronDown, Bell, CheckCheck, Clock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../context/userContext';
+import api from '../utility/api';
+import socket from '../utility/socket'; // 🟢 Ensure your socket is imported
 
-const Navbar = ({ onLoginClick, onSignupClick, loggedIn, onLogout }) => {
+// 🟢 Helper function for elegant timestamps
+const timeAgo = (date) => {
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  let interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + "d ago";
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + "h ago";
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + "m ago";
+  return "Just now";
+};
+
+const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  
+  // 🟢 Notification State
+  const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  const { user, setUser } = useUser();
+  const navigate = useNavigate();
+  const loggedIn = !!user;
+  
+  const menuRef = useRef(null);
+  const notifRef = useRef(null);
 
+  // 🟢 1. Intelligent Outside Click Handler
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) setShowProfileMenu(false);
+      if (notifRef.current && !notifRef.current.contains(event.target)) setShowNotifMenu(false);
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Scroll effect for Glassmorphism
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) element.scrollIntoView({ behavior: 'smooth' });
-    setIsMenuOpen(false);
+// 🟢 2. Fetch Notifications & Listen to WebSockets
+  useEffect(() => {
+    if (!loggedIn || !user) return;
+
+    // 1. Fetch initial database notifications
+    api.get('/notification/my-notifications')
+      .then(res => {
+        if (res.data?.success) {
+          setNotifications(res.data.notifications);
+          setUnreadCount(res.data.unreadCount);
+        }
+      }).catch(err => console.error("Failed to fetch notifications:", err));
+
+    // 2. Connect socket and join personal user room!
+    socket.connect();
+    socket.emit('joinUser', user._id || user.id); // 🟢 The missing wire!
+
+    // 3. Real-time listener for new alerts
+    const handleNewNotification = (notif) => {
+      setNotifications(prev => [notif, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    };
+
+    socket.on('newNotification', handleNewNotification);
+
+    return () => socket.off('newNotification', handleNewNotification);
+  }, [loggedIn, user]);
+
+  // 🟢 3. Mark As Read Actions
+  const markAsRead = async (id) => {
+    try {
+      await api.put('/notification/read', { notificationId: id });
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) { console.error(err); }
   };
 
-  return (
-    <nav className="fixed top-0 left-0 w-full z-50 transition-all duration-500 bg-white/95 backdrop-blur-xl shadow-xl border-b border-gray-200/50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-18 py-2">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600">
-              <Users className="h-7 w-7 text-white" />
-            </div>
-            <span className="text-3xl font-black text-gray-800">
-              Join<span className="text-blue-600">Me</span>
-            </span>
-          </div>
+  const markAllAsRead = async () => {
+    try {
+      await api.put('/notification/read', {});
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) { console.error(err); }
+  };
 
-          {/* Navigation or Profile */}
+  const handleLogout = () => {
+    setShowProfileMenu(false);
+    setUser(null);
+    navigate('/');
+  };
+
+  const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+  const displayRating = user?.averageRating > 0 ? user.averageRating.toFixed(1) : 'New';
+
+  return (
+    <nav className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-xl shadow-md border-b border-gray-100' : 'bg-white border-b border-gray-100'}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16 py-3">
+          
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-3 group">
+            <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 group-hover:shadow-lg group-hover:shadow-indigo-500/30 transition-all">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-2xl font-black text-gray-800 tracking-tight">
+              Join<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Me</span>
+            </span>
+          </Link>
+
+          {/* Navigation Items */}
           {loggedIn ? (
-            <div className="relative">
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="text-gray-700 hover:text-blue-600 transition-all"
-              >
-                <UserCircle2 size={32} />
-              </button>
-              {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg border border-gray-200 py-2 z-50">
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      if (onLogout) onLogout();
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-100"
-                  >
-                    <LogOut size={18} /> Logout
-                  </button>
-                </div>
-              )}
+            <div className="flex items-center gap-4">
+              
+              {/* 🟢 NOTIFICATION BELL SYSTEM */}
+              <div className="relative" ref={notifRef}>
+                <button 
+                  onClick={() => setShowNotifMenu(!showNotifMenu)}
+                  className="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none"
+                >
+                  <Bell size={22} className={unreadCount > 0 ? "text-indigo-600" : ""} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                  )}
+                </button>
+
+                {/* Dropdown UI */}
+                {showNotifMenu && (
+                  <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-50 animate-fade-in origin-top-right flex flex-col max-h-[80vh]">
+                    <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                      <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button onClick={markAllAsRead} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                          <CheckCheck size={14} /> Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="overflow-y-auto flex-1">
+                      {notifications.length > 0 ? (
+                        notifications.map((notif) => (
+                          <div 
+                            key={notif._id} 
+                            onClick={() => !notif.isRead && markAsRead(notif._id)}
+                            className={`px-4 py-3 border-b border-gray-50 flex items-start gap-3 cursor-pointer transition-colors ${notif.isRead ? 'opacity-70 hover:bg-gray-50' : 'bg-indigo-50/30 hover:bg-indigo-50/50'}`}
+                          >
+                            <div className="mt-1 relative flex-shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                                🔔
+                              </div>
+                              {!notif.isRead && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></div>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm ${notif.isRead ? 'text-gray-600' : 'text-gray-800 font-bold'}`}>
+                                {notif.message}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <Clock size={12} /> {timeAgo(notif.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="py-8 text-center px-4">
+                          <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-2"><Bell size={20} className="text-gray-300" /></div>
+                          <p className="text-sm font-medium text-gray-500">You're all caught up!</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* PROFILE MENU */}
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all focus:outline-none"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                    {userInitial}
+                  </div>
+                  <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${showProfileMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-3 w-56 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-50 animate-fade-in origin-top-right">
+                    <div className="px-5 py-3 border-b border-gray-100 mb-2 bg-gray-50/50">
+                      <p className="text-sm font-bold text-gray-800 truncate">{user.name}</p>
+                      <div className="flex items-center text-xs font-bold mt-1 text-gray-500">
+                        <Star size={14} className="text-yellow-500 fill-yellow-500 mr-1.5" />
+                        {displayRating} <span className="font-medium ml-1 text-gray-400">({user?.totalRatings || 0} reviews)</span>
+                      </div>
+                    </div>
+                    <div className="px-2 space-y-1">
+                      <Link to="/dashboard" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors font-medium">
+                        <LayoutDashboard size={18} /> Dashboard
+                      </Link>
+                      <Link to="/profile" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors font-medium">
+                        <User size={18} /> My Profile
+                      </Link>
+                    </div>
+                    <div className="px-4 my-2 border-t border-gray-100"></div>
+                    <div className="px-2">
+                      <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 w-full text-left rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors font-medium">
+                        <LogOut size={18} /> Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <>
-              {/* Desktop Nav */}
-              <div className="hidden md:flex items-center space-x-10">
-                <button onClick={() => scrollToSection('home')} className="font-semibold text-gray-700 hover:text-blue-600">Home</button>
-                <button onClick={() => scrollToSection('features')} className="font-semibold text-gray-700 hover:text-blue-600">Explore</button>
-                <button onClick={() => scrollToSection('features')} className="font-semibold text-gray-700 hover:text-blue-600">Features</button>
-                <button onClick={() => scrollToSection('about')} className="font-semibold text-gray-700 hover:text-blue-600">About</button>
-              </div>
-
-              {/* Desktop CTA */}
-              <div className="hidden md:flex items-center space-x-4">
-                <button onClick={onLoginClick} className="font-semibold text-gray-700 hover:text-blue-600">Login</button>
-                <button
-                  onClick={onSignupClick}
-                  className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg shadow-blue-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5"
-                >
+             <div className="hidden md:flex items-center space-x-4">
+                <Link to="/login" className="font-semibold text-gray-700 hover:text-indigo-600 transition-colors">Login</Link>
+                <Link to="/signup" className="px-6 py-2.5 rounded-xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-md transition-all">
                   Sign Up
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Mobile menu button */}
-          {!loggedIn && (
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 rounded-lg text-gray-700 hover:bg-gray-100"
-              >
-                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
-            </div>
+                </Link>
+             </div>
           )}
         </div>
-
-        {/* Mobile Navigation */}
-        {!loggedIn && isMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 bg-white rounded-2xl mt-2 shadow-lg border border-gray-200">
-              {['home', 'features', 'about'].map((id) => (
-                <button
-                  key={id}
-                  onClick={() => scrollToSection(id)}
-                  className="block w-full text-left px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 rounded-xl font-medium"
-                >
-                  {id.charAt(0).toUpperCase() + id.slice(1)}
-                </button>
-              ))}
-              <div className="px-4 pt-3 border-t border-gray-200 space-y-2">
-                <button onClick={onLoginClick} className="block w-full text-left text-gray-700 hover:text-blue-600 font-medium">Login</button>
-                <button
-                  onClick={onSignupClick}
-                  className="w-full py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700"
-                >
-                  Sign Up
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </nav>
   );

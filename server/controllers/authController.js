@@ -7,7 +7,7 @@ export const register = async (req, res) => {
   const { name, email, password, gender, age, city, profession } = req.body;
 
   if (!name || !email || !password || !gender || !age || !city || !profession) {
-    return res.json({ success: false, message: 'All fields are required' });
+    return res.status(400).json({ success: false, message: 'All fields are required' });
   }
 
   try {
@@ -18,10 +18,10 @@ export const register = async (req, res) => {
       const isFullyRegistered = existingUser.isVerified && !isTemp;
 
       if (isFullyRegistered) {
-        return res.json({ success: false, message: 'User already exists' });
+        return res.status(409).json({ success: false, message: 'User already exists' });
       }
 
-      // Temp user who completed OTP verification — now complete registration
+      // Temp user who completed OTP verification
       if (existingUser.isVerified && isTemp) {
         existingUser.name = name;
         existingUser.password = await bcrypt.hash(password, 10);
@@ -33,43 +33,42 @@ export const register = async (req, res) => {
         await existingUser.save();
         await sendWelcomeEmail(email, name);
 
-        const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET, {
-          expiresIn: '7d',
-        });
+        const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         res.cookie('token', token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
-          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+          maxAge: 7 * 24 * 60 * 60 * 1000, 
         });
 
-        return res.json({ success: true, message: 'Registration successful' });
+        const newSafeUser = {
+          _id: existingUser._id, // 🟢 ADDED ID
+          name: existingUser.name,
+          email: existingUser.email,
+          gender: existingUser.gender,
+          age: existingUser.age,
+          city: existingUser.city,
+          profession: existingUser.profession,
+          isVerified: existingUser.isVerified,
+          averageRating: existingUser.averageRating || 0,
+          totalRatings: existingUser.totalRatings || 0,
+        };
+        return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser });
       }
 
-      // Case: user exists but not verified (e.g. closed signup modal early)
-      return res.json({ success: false, message: 'Please verify your email first' });
+      return res.status(400).json({ success: false, message: 'Please verify your email first' });
     }
 
-    // No existing user at all — fallback registration (should not hit if OTP flow is used correctly)
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new userModel({
-      name,
-      email,
-      password: hashedPassword,
-      gender,
-      age,
-      city,
-      profession,
-      isVerified: true,
+      name, email, password: hashedPassword, gender, age, city, profession, isVerified: true,
     });
 
     await newUser.save();
     await sendWelcomeEmail(email, name);
 
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -78,11 +77,24 @@ export const register = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.json({ success: true, message: 'Registration successful' });
+    const newSafeUser = {
+      _id: newUser._id, // 🟢 ADDED ID
+      name: newUser.name,
+      email: newUser.email,
+      gender: newUser.gender,
+      age: newUser.age,
+      city: newUser.city,
+      profession: newUser.profession,
+      isVerified: newUser.isVerified,
+      averageRating: newUser.averageRating || 0,
+      totalRatings: newUser.totalRatings || 0,
+    };
+
+    return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser });
 
   } catch (error) {
     console.error('Register error:', error);
-    return res.json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -91,27 +103,26 @@ export const login = async (req, res) => {
     const { email, password, rememberMe } = req.body;
 
     if (!email || !password) {
-        return res.json({ success: false, message: 'Email and password are required' });
+        return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
     try {
         const user = await userModel.findOne({ email });
 
         if (!user) {
-            return res.json({ success: false, message: 'Invalid email' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
         if (!user.isVerified) {
-            return res.json({ success: false, message: 'Please verify your email before logging in' });
+            return res.status(403).json({ success: false, message: 'Please verify your email before logging in' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
-            return res.json({ success: false, message: 'Invalid password' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
-        // ✅ Token expiry based on rememberMe
         const expiresIn = rememberMe ? '30d' : '1h';
         const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000;
 
@@ -124,10 +135,24 @@ export const login = async (req, res) => {
             maxAge,
         });
 
-        return res.json({ success: true, message: 'Login successful' });
+        const safeUser = {
+            _id: user._id, // 🟢 ADDED ID
+            name: user.name,
+            email: user.email,
+            gender: user.gender,
+            age: user.age,
+            city: user.city,
+            profession: user.profession,
+            isVerified: user.isVerified,
+            averageRating: user.averageRating || 0,
+            totalRatings: user.totalRatings || 0,
+        };
+
+        return res.status(200).json({ success: true, message: 'Login successful', user: safeUser });
 
     } catch (error) {
-        return res.json({ success: false, message: error.message });
+        console.error('Login error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -139,9 +164,10 @@ export const logout = async (req, res) => {
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
         });
-        return res.json({ success: true, message: 'Logout successful' });
+        return res.status(200).json({ success: true, message: 'Logout successful' });
     } catch (error) {
-        return res.json({ success: false, message: error.message });
+        console.error('Logout error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -153,7 +179,7 @@ export const sendOTPEmail = async (req, res) => {
 
   if (!email) {
     console.log("🔴 No email provided in request body");
-    return res.json({ success: false, message: 'Email is required' });
+    return res.status(400).json({ success: false, message: 'Email is required' });
   }
 
   try {
@@ -186,13 +212,13 @@ export const sendOTPEmail = async (req, res) => {
         console.log("✅ Step 3: Temporary user saved to DB successfully");
       } catch (err) {
         console.error("❌ Failed to save temp user:", err.message);
-        return res.json({ success: false, message: 'Failed to create temp user' });
+        return res.status(500).json({ success: false, message: 'Failed to create temp user' });
       }
 
     } else {
       if (user.isVerified) {
         console.log("🚫 Step 3: User is already verified");
-        return res.json({ success: false, message: 'Account already verified!' });
+        return res.status(400).json({ success: false, message: 'Account already verified!' });
       }
 
       user.verifyOtp = otp;
@@ -203,7 +229,7 @@ export const sendOTPEmail = async (req, res) => {
         console.log("🔄 Step 3: Updated OTP and expiry for existing user");
       } catch (err) {
         console.error("❌ Failed to update OTP for existing user:", err.message);
-        return res.json({ success: false, message: 'Failed to update OTP' });
+        return res.status(500).json({ success: false, message: 'Failed to update OTP' });
       }
     }
 
@@ -213,15 +239,15 @@ export const sendOTPEmail = async (req, res) => {
 
     if (emailSent) {
       console.log("✅ Step 5: OTP sent successfully!");
-      return res.json({ success: true, message: 'OTP sent successfully' });
+      return res.status(200).json({ success: true, message: 'OTP sent successfully' });
     } else {
       console.log("❌ Step 5: Failed to send OTP email");
-      return res.json({ success: false, message: 'Failed to send OTP' });
+      return res.status(500).json({ success: false, message: 'Failed to send OTP' });
     }
 
   } catch (error) {
     console.error("🔥 Unhandled error in sendOTPEmail:", error);
-    return res.json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -234,22 +260,22 @@ export const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-        return res.json({ success: false, message: 'Email and OTP are required' });
+        return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
 
     try {
         const user = await userModel.findOne({ email });
 
         if (!user) {
-            return res.json({ success: false, message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         if (user.isVerified) {
-            return res.json({ success: false, message: 'Account already verified' });
+            return res.status(400).json({ success: false, message: 'Account already verified' });
         }
 
         if (user.verifyOtp !== otp || Date.now() > user.verifyOtpExpireAt) {
-            return res.json({ success: false, message: 'Invalid or expired OTP' });
+            return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         }
 
         user.isVerified = true;
@@ -257,26 +283,29 @@ export const verifyOTP = async (req, res) => {
         user.verifyOtpExpireAt = 0;
         await user.save();
 
-        return res.json({ success: true, message: 'Account verified successfully' });
+        return res.status(200).json({ success: true, message: 'Account verified successfully' });
 
     } catch (error) {
-        return res.json({ success: false, message: error.message });
-    }
+        console.error('OTP verify error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    };
 };
 
 export const isAuthenticated = async (req, res) => {
     try {
         if (!req.user || !req.user.id) {
-            return res.json({ success: false, message: 'Unauthorized access' });
+            return res.status(401).json({ success: false, message: 'Unauthorized access' });
         }
 
-        const user = await userModel.findById(req.user.id).select('name email gender age city profession isVerified');
+        // 🟢 ADDED _id to the .select() string so Mongoose guarantees it is sent
+        const user = await userModel.findById(req.user.id).select('_id name email gender age city profession isVerified averageRating totalRatings');
         if (!user) {
-            return res.json({ success: false, message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
-        return res.json({ success: true });
+        return res.status(200).json({ success: true, user });
     } catch (error) {
-        return res.json({ success: false, message: error.message });
+        console.error('isAuthenticated error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -284,14 +313,14 @@ export const sendResetOTP = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-        return res.json({ success: false, message: 'Email is required' });
+        return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
     try {
         const user = await userModel.findOne({ email });
 
         if (!user) {
-            return res.json({ success: false, message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -302,13 +331,14 @@ export const sendResetOTP = async (req, res) => {
         const emailSent = await sendResetOTPEmailFunc(email, otp);
 
         if (emailSent) {
-            return res.json({ success: true, message: 'OTP sent successfully' });
+            return res.status(200).json({ success: true, message: 'OTP sent successfully' });
         } else {
-            return res.json({ success: false, message: 'Failed to send OTP' });
+            return res.status(500).json({ success: false, message: 'Failed to send OTP' });
         }
 
     } catch (error) {
-        return res.json({ success: false, message: error.message });
+        console.error('sendResetOTP error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -317,18 +347,19 @@ export const verifyOnlyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-        return res.json({ success: false, message: 'Email and OTP are required' });
+        return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
 
     try {
         const user = await userModel.findOne({ email });
         if (!user || user.resetOtp !== otp || Date.now() > user.resetOtpExpireAt) {
-            return res.json({ success: false, message: 'Invalid or expired OTP' });
+            return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         }
 
-        return res.json({ success: true, message: 'OTP Verified' });
+        return res.status(200).json({ success: true, message: 'OTP Verified' });
     } catch (err) {
-        return res.json({ success: false, message: err.message });
+        console.error('verifyOnlyOTP error:', err);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
@@ -337,14 +368,14 @@ export const resetPassword = async (req, res) => {
     const { email, newPassword } = req.body;
 
     if (!email || !newPassword) {
-        return res.json({ success: false, message: 'Email and new password are required' });
+        return res.status(400).json({ success: false, message: 'Email and new password are required' });
     }
 
     try {
         const user = await userModel.findOne({ email });
 
         if (!user) {
-            return res.json({ success: false, message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -354,10 +385,11 @@ export const resetPassword = async (req, res) => {
 
         await user.save();
 
-        return res.json({ success: true, message: 'Password reset successfully' });
+        return res.status(200).json({ success: true, message: 'Password reset successfully' });
 
     } catch (error) {
-        return res.json({ success: false, message: error.message });
+        console.error('resetPassword error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
