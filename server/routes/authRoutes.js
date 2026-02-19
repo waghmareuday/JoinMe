@@ -1,10 +1,16 @@
 import express from 'express';
-import { isAuthenticated, login, logout, register, resetPassword, sendOTPEmail, sendResetOTP, verifyOnlyOTP, verifyOTP } from '../controllers/authController.js';
+import { 
+  isAuthenticated, 
+  login, 
+  logout, 
+  register, 
+  resetPassword, 
+  sendOTPEmail, 
+  sendResetOTP, 
+  verifyOnlyOTP, 
+  verifyOTP 
+} from '../controllers/authController.js';
 import userAuth from '../middleware/userAuth.js';
-import jwt from 'jsonwebtoken';
-
-
-const { verify } = jwt;
 
 const authRouter = express.Router();
 
@@ -21,7 +27,5 @@ authRouter.post('/reset-password', resetPassword);
 authRouter.get('/check-auth', userAuth, (req, res) => {
   return res.status(200).json({ success: true });
 });
-
-
 
 export default authRouter;
