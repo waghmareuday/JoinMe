@@ -1,4 +1,4 @@
-# 🤝 JoinMe - Real-Time Event Matchmaking Platform
+# 🤝 JoinMe - Social Utility Platform
 
 ![MERN Stack](https://img.shields.io/badge/Stack-MERN-blue?style=flat-square&logo=mongodb)
 ![Socket.io](https://img.shields.io/badge/RealTime-Socket.io-black?style=flat-square&logo=socket.io)
