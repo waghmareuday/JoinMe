@@ -3,11 +3,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Hardcode the SMTP settings here to fix the "Connection timeout" on Render
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465, // Must be 465
+  secure: true, // Must be true for port 465
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
+    pass: process.env.SMTP_PASS, // MUST be a 16-letter App Password, not normal password
   },
 });
 
@@ -25,9 +28,9 @@ export const sendWelcomeEmail = async (to, name) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log("Welcome email sent to", to);
+    console.log("✅ Welcome email sent to", to);
   } catch (err) {
-    console.error("Error sending welcome email:", err.message);
+    console.error("❌ Error sending welcome email:", err.message);
   }
 };
 
@@ -51,10 +54,10 @@ export const sendOTPEmailFunc = async (to, otp) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('OTP email sent successfully');
+    console.log('✅ OTP email sent successfully');
     return true;
   } catch (error) {
-    console.error('Error sending email:', error.message);
+    console.error('❌ EXACT NODEMAILER ERROR:', error.message);
     return false;
   }
 };
@@ -77,13 +80,13 @@ export const verifyOTPEmail = async (to, otp) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('OTP verification email sent successfully');
+    console.log('✅ OTP verification email sent successfully');
     return true;
   } catch (error) {
-    console.error('Error sending email:', error.message);
+    console.error('❌ Error sending verification email:', error.message);
     return false;
   }
-}
+};
 
 export const sendResetOTPEmailFunc = async (to, otp) => {
   try {
@@ -108,10 +111,10 @@ export const sendResetOTPEmailFunc = async (to, otp) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('Password reset OTP email sent successfully to:', to);
+    console.log('✅ Password reset OTP email sent successfully to:', to);
     return true;
   } catch (error) {
-    console.error('Error sending password reset OTP email:', error.message);
+    console.error('❌ Error sending password reset OTP email:', error.message);
     return false;
   }
 };
@@ -120,7 +123,6 @@ export const sendResetOTPEmailFunc = async (to, otp) => {
 export const sendEventTicketEmail = async (to, userName, eventDetails) => {
   const { title, date, time, venue, city, hostName } = eventDetails;
   
-  // Format the date nicely
   const formattedDate = new Date(date).toLocaleDateString('en-GB', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
@@ -180,10 +182,10 @@ export const sendEventTicketEmail = async (to, userName, eventDetails) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Event ticket email sent successfully to: ${to}`);
+    console.log(`✅ Event ticket email sent successfully to: ${to}`);
     return true;
   } catch (error) {
-    console.error('Error sending event ticket email:', error.message);
+    console.error('❌ Error sending event ticket email:', error.message);
     return false;
   }
 };
@@ -223,10 +225,10 @@ export const sendEventCompletedEmail = async (to, userName, eventDetails) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Event completed email sent successfully to: ${to}`);
+    console.log(`✅ Event completed email sent successfully to: ${to}`);
     return true;
   } catch (error) {
-    console.error('Error sending completed email:', error.message);
+    console.error('❌ Error sending completed email:', error.message);
     return false;
   }
 };
@@ -271,10 +273,10 @@ export const sendEventCancelledEmail = async (to, userName, eventDetails, cancel
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Event cancelled email sent successfully to: ${to}`);
+    console.log(`✅ Event cancelled email sent successfully to: ${to}`);
     return true;
   } catch (error) {
-    console.error('Error sending cancelled email:', error.message);
+    console.error('❌ Error sending cancelled email:', error.message);
     return false;
   }
 };

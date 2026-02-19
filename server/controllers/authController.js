@@ -1,38 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
-import { sendWelcomeEmail, sendResetOTPEmailFunc, sendOTPEmailFunc } from '../config/nodemailer.js';
-import nodemailer from 'nodemailer';
-
-export const sendOTPEmailFunc = async (email, otp) => {
-  try {
-    // Make sure your transporter uses exactly these settings for Render
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465, // Use 465 for secure, 587 for TLS
-      secure: true, 
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS, // MUST be a 16-letter App Password
-      },
-    });
-
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: email,
-      subject: 'JoinMe Verification OTP',
-      text: `Your JoinMe OTP is ${otp}. It is valid for 10 minutes.`,
-    };
-
-    // This is the line that was hanging. Wrapping it in try/catch stops the freeze.
-    await transporter.sendMail(mailOptions);
-    return true; 
-
-  } catch (error) {
-    console.error("\n❌ EXACT NODEMAILER ERROR:", error.message);
-    return false; // Returns false instantly so the frontend doesn't hang
-  }
-};
+// 🟢 The duplicate function was removed, and we import it directly from nodemailer.js
+import { sendWelcomeEmail, sendResetOTPEmailFunc, sendOTPEmailFunc } from '../config/nodemailer.js'; 
 
 export const register = async (req, res) => {
   const { name, email, password, gender, age, city, profession } = req.body;
@@ -45,7 +15,7 @@ export const register = async (req, res) => {
     let existingUser = await userModel.findOne({ email });
 
     if (existingUser) {
-      const isTemp = existingUser.name === 'Temp' || existingUser.password === 'dummy';
+      const isTemp = existingUser.name === 'Temp' || existingUser.password === 'dummyPassword123!';
       const isFullyRegistered = existingUser.isVerified && !isTemp;
 
       if (isFullyRegistered) {
@@ -74,7 +44,7 @@ export const register = async (req, res) => {
         });
 
         const newSafeUser = {
-          _id: existingUser._id, // 🟢 ADDED ID
+          _id: existingUser._id,
           name: existingUser.name,
           email: existingUser.email,
           gender: existingUser.gender,
@@ -109,7 +79,7 @@ export const register = async (req, res) => {
     });
 
     const newSafeUser = {
-      _id: newUser._id, // 🟢 ADDED ID
+      _id: newUser._id,
       name: newUser.name,
       email: newUser.email,
       gender: newUser.gender,
@@ -167,7 +137,7 @@ export const login = async (req, res) => {
         });
 
         const safeUser = {
-            _id: user._id, // 🟢 ADDED ID
+            _id: user._id,
             name: user.name,
             email: user.email,
             gender: user.gender,
@@ -221,12 +191,13 @@ export const sendOTPEmail = async (req, res) => {
     if (!user) {
       console.log("⚠️ Creating temporary user...");
       user = new userModel({
-        name: 'Temp User',
+        name: 'Temp',
         email,
         password: 'dummyPassword123!',
-        gender: 'Other', // Make sure this matches your Enum in userModel
-        age: 18,         // Safe default
+        gender: 'Other',
+        age: 18,
         city: 'Unknown',
+        profession: 'Unknown', // Make sure this is provided since it's required on register
         isVerified: false,
         verifyOtp: otp,
         verifyOtpExpireAt: expiry
@@ -248,7 +219,7 @@ export const sendOTPEmail = async (req, res) => {
 
     console.log("📬 Step 4: Attempting to send email...");
     
-    // If this hangs, the problem is 100% inside sendOTPEmailFunc
+    // 🟢 This function is now correctly importing from nodemailer.js
     const emailSent = await sendOTPEmailFunc(email, otp);
 
     if (emailSent) {
@@ -264,11 +235,6 @@ export const sendOTPEmail = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
-
-
-
-
-
 
 export const verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
@@ -311,7 +277,6 @@ export const isAuthenticated = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Unauthorized access' });
         }
 
-        // 🟢 ADDED _id to the .select() string so Mongoose guarantees it is sent
         const user = await userModel.findById(req.user.id).select('_id name email gender age city profession isVerified averageRating totalRatings');
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
@@ -406,4 +371,3 @@ export const resetPassword = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
-
