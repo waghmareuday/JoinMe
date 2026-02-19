@@ -2,6 +2,37 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
 import { sendWelcomeEmail, sendResetOTPEmailFunc, sendOTPEmailFunc } from '../config/nodemailer.js';
+import nodemailer from 'nodemailer';
+
+export const sendOTPEmailFunc = async (email, otp) => {
+  try {
+    // Make sure your transporter uses exactly these settings for Render
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465, // Use 465 for secure, 587 for TLS
+      secure: true, 
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS, // MUST be a 16-letter App Password
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: 'JoinMe Verification OTP',
+      text: `Your JoinMe OTP is ${otp}. It is valid for 10 minutes.`,
+    };
+
+    // This is the line that was hanging. Wrapping it in try/catch stops the freeze.
+    await transporter.sendMail(mailOptions);
+    return true; 
+
+  } catch (error) {
+    console.error("\n❌ EXACT NODEMAILER ERROR:", error.message);
+    return false; // Returns false instantly so the frontend doesn't hang
+  }
+};
 
 export const register = async (req, res) => {
   const { name, email, password, gender, age, city, profession } = req.body;
@@ -178,76 +209,59 @@ export const sendOTPEmail = async (req, res) => {
   console.log("📨 Email received from frontend:", email);
 
   if (!email) {
-    console.log("🔴 No email provided in request body");
+    console.log("🔴 No email provided");
     return res.status(400).json({ success: false, message: 'Email is required' });
   }
 
   try {
     let user = await userModel.findOne({ email });
-    console.log("🟡 Step 2: Searched DB for existing user...");
-    if (user) {
-      console.log("🟢 Found existing user in DB:", user.email);
-    } else {
-      console.log("⚠️ No user found with this email. Creating temporary user...");
-    }
-
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + 10 * 60 * 1000;
 
     if (!user) {
+      console.log("⚠️ Creating temporary user...");
       user = new userModel({
-        name: 'Temp',
+        name: 'Temp User',
         email,
-        password: 'dummy',
-        gender: 'Other',
-        age: 5,
+        password: 'dummyPassword123!',
+        gender: 'Other', // Make sure this matches your Enum in userModel
+        age: 18,         // Safe default
         city: 'Unknown',
         isVerified: false,
         verifyOtp: otp,
         verifyOtpExpireAt: expiry
       });
 
-      try {
-        await user.save();
-        console.log("✅ Step 3: Temporary user saved to DB successfully");
-      } catch (err) {
-        console.error("❌ Failed to save temp user:", err.message);
-        return res.status(500).json({ success: false, message: 'Failed to create temp user' });
-      }
-
+      await user.save();
+      console.log("✅ Step 3: Temporary user saved");
     } else {
       if (user.isVerified) {
-        console.log("🚫 Step 3: User is already verified");
+        console.log("🚫 Step 3: User already verified");
         return res.status(400).json({ success: false, message: 'Account already verified!' });
       }
 
       user.verifyOtp = otp;
       user.verifyOtpExpireAt = expiry;
-
-      try {
-        await user.save();
-        console.log("🔄 Step 3: Updated OTP and expiry for existing user");
-      } catch (err) {
-        console.error("❌ Failed to update OTP for existing user:", err.message);
-        return res.status(500).json({ success: false, message: 'Failed to update OTP' });
-      }
+      await user.save();
+      console.log("🔄 Step 3: Updated OTP for existing user");
     }
 
-    console.log("📬 Step 4: Sending OTP via email:", otp);
-
+    console.log("📬 Step 4: Attempting to send email...");
+    
+    // If this hangs, the problem is 100% inside sendOTPEmailFunc
     const emailSent = await sendOTPEmailFunc(email, otp);
 
     if (emailSent) {
-      console.log("✅ Step 5: OTP sent successfully!");
+      console.log("✅ Step 5: Email sent successfully");
       return res.status(200).json({ success: true, message: 'OTP sent successfully' });
     } else {
-      console.log("❌ Step 5: Failed to send OTP email");
-      return res.status(500).json({ success: false, message: 'Failed to send OTP' });
+      console.log("❌ Step 5: Nodemailer failed. Check logs above.");
+      return res.status(500).json({ success: false, message: 'Failed to send OTP email. Check backend logs.' });
     }
 
   } catch (error) {
     console.error("🔥 Unhandled error in sendOTPEmail:", error);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
 
