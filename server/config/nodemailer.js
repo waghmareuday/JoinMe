@@ -5,13 +5,10 @@ dotenv.config();
 
 // Hardcode the SMTP settings here to fix the "Connection timeout" on Render
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587, // Must be 465
-  secure: false, // Must be false for port 587
-  requireTLS: true, // Force TLS
+  service: 'gmail', // This single line replaces host, port, and secure settings!
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS, // MUST be a 16-letter App Password, not normal password
+    pass: process.env.SMTP_PASS, // Ensure this matches your Render variable exactly
   },
 });
 
