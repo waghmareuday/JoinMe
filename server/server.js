@@ -31,7 +31,7 @@ app.get('/test-mail', async (req, res) => {
       service: 'gmail',
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD, // Make sure this matches the variable name in Render
+        pass: process.env.SMTP_PASSW, // Make sure this matches the variable name in Render
       },
     });
 
