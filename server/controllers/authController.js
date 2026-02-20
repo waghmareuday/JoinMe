@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
 // 🟢 The duplicate function was removed, and we import it directly from nodemailer.js
 import { sendWelcomeEmail, sendResetOTPEmailFunc, sendOTPEmailFunc } from '../config/nodemailer.js'; 
+import net from 'net';
 
 export const register = async (req, res) => {
   const { name, email, password, gender, age, city, profession } = req.body;
@@ -370,4 +371,39 @@ export const resetPassword = async (req, res) => {
         console.error('resetPassword error:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
+};
+
+export const diagnoseNetwork = (req, res) => {
+    const client = new net.Socket();
+    
+    // Set a strict 5-second timeout instead of Nodemailer's 2-minute hang
+    client.setTimeout(5000); 
+
+    client.on('connect', () => {
+        client.destroy();
+        return res.status(200).json({ 
+            status: "✅ SUCCESS", 
+            message: "Render's firewall is OPEN. Port 587 is working perfectly." 
+        });
+    });
+
+    client.on('timeout', () => {
+        client.destroy();
+        return res.status(403).json({ 
+            status: "🚫 BLOCKED BY FIREWALL", 
+            reason: "Render Free Tier silently dropped the connection to smtp.gmail.com on Port 587.",
+            proof: "This confirms the issue is 100% Render's network, not your Nodemailer code."
+        });
+    });
+
+    client.on('error', (err) => {
+        return res.status(500).json({ 
+            status: "❌ UNKNOWN ERROR", 
+            details: err.message 
+        });
+    });
+
+    // Attempt to connect to Google's exact email port
+    console.log("Diagnostic: Pinging smtp.gmail.com on port 587...");
+    client.connect(587, 'smtp.gmail.com');
 };

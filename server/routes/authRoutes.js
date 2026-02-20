@@ -23,6 +23,7 @@ authRouter.post('/is-auth', userAuth, isAuthenticated);
 authRouter.post('/send-forget-otp', sendResetOTP);
 authRouter.post('/verify-reset-otp', verifyOnlyOTP);
 authRouter.post('/reset-password', resetPassword);
+router.get('/diagnose', diagnoseNetwork);
 
 authRouter.get('/check-auth', userAuth, (req, res) => {
   return res.status(200).json({ success: true });
