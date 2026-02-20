@@ -3,16 +3,15 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Initialize Resend with the API key you just generated
+// Initialize Resend with your API Key
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // 🔴 CRITICAL RESEND RULE: On the free tier, you MUST use this exact 'from' address.
-// If you change this before verifying a custom domain, Resend will throw an error.
 const defaultFrom = 'JoinMe Support <onboarding@resend.dev>';
 
 export const sendWelcomeEmail = async (to, name) => {
   try {
-    await resend.emails.send({
+    const mailOptions = {
       from: defaultFrom,
       to: to, // Must be the email you registered Resend with while testing!
       subject: 'Welcome to JoinMe!',
@@ -21,18 +20,19 @@ export const sendWelcomeEmail = async (to, name) => {
              <p>Get ready to connect, collaborate and explore!</p>
              <br />
              <p>Cheers,<br />The JoinMe Team</p>`
-    });
-    console.log("✅ Welcome email sent to", to);
+    };
+    await resend.emails.send(mailOptions);
+    console.log("✅ Welcome email sent via Resend to", to);
     return true;
   } catch (err) {
-    console.error("❌ Error sending welcome email:", err.message);
+    console.error("❌ Resend Error (Welcome):", err.message);
     return false;
   }
 };
 
 export const sendOTPEmailFunc = async (to, otp) => {
   try {
-    await resend.emails.send({
+    const mailOptions = {
       from: defaultFrom,
       to: to,
       subject: 'Your OTP for JoinMe Verification',
@@ -47,8 +47,9 @@ export const sendOTPEmailFunc = async (to, otp) => {
           <p>Cheers,<br>The JoinMe Team</p>
         </div>
       `
-    });
-    console.log('✅ OTP email sent successfully');
+    };
+    await resend.emails.send(mailOptions);
+    console.log('✅ OTP email sent successfully via Resend');
     return true;
   } catch (error) {
     console.error('❌ EXACT RESEND ERROR:', error.message);
@@ -58,7 +59,7 @@ export const sendOTPEmailFunc = async (to, otp) => {
 
 export const verifyOTPEmail = async (to, otp) => {
   try {
-    await resend.emails.send({
+    const mailOptions = {
       from: defaultFrom,
       to: to,
       subject: 'Your OTP for JoinMe Verification',
@@ -71,20 +72,21 @@ export const verifyOTPEmail = async (to, otp) => {
           <p>Cheers,<br>The JoinMe Team</p>
         </div>
       `
-    });
-    console.log('✅ OTP verification email sent successfully');
+    };
+    await resend.emails.send(mailOptions);
+    console.log('✅ OTP verification email sent successfully via Resend');
     return true;
   } catch (error) {
-    console.error('❌ Error sending verification email:', error.message);
+    console.error('❌ Resend Error (Verify OTP):', error.message);
     return false;
   }
 };
 
 export const sendResetOTPEmailFunc = async (to, otp) => {
   try {
-    await resend.emails.send({
+    const mailOptions = {
       from: defaultFrom,
-      to,
+      to: to,
       subject: 'Password Reset OTP - JoinMe',
       text: `Hello,\n\nWe received a request to reset your password on JoinMe.\n\nYour One-Time Password (OTP) is: ${otp}\n\nThis OTP is valid for the next 10 minutes. Please do not share it with anyone for your security.\n\nIf you didn’t request a password reset, you can safely ignore this email.\n\nBest regards,  \nThe JoinMe Team`,
       html: `
@@ -100,16 +102,16 @@ export const sendResetOTPEmailFunc = async (to, otp) => {
           <p>Regards,<br><strong>The JoinMe Team</strong></p>
         </div>
       `
-    });
-    console.log('✅ Password reset OTP email sent successfully to:', to);
+    };
+    await resend.emails.send(mailOptions);
+    console.log('✅ Password reset OTP email sent successfully via Resend');
     return true;
   } catch (error) {
-    console.error('❌ Error sending password reset OTP email:', error.message);
+    console.error('❌ Resend Error (Reset OTP):', error.message);
     return false;
   }
 };
 
-// 🟢 NEW: Automated Event Ticket Email!
 export const sendEventTicketEmail = async (to, userName, eventDetails) => {
   const { title, date, time, venue, city, hostName } = eventDetails;
   
@@ -118,9 +120,9 @@ export const sendEventTicketEmail = async (to, userName, eventDetails) => {
   });
 
   try {
-    await resend.emails.send({
+    const mailOptions = {
       from: defaultFrom,
-      to,
+      to: to,
       subject: `🎫 Request Approved: You're in for ${title}!`,
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 40px 20px;">
@@ -175,7 +177,7 @@ export const sendEventTicketEmail = async (to, userName, eventDetails) => {
     console.log(`✅ Event ticket email sent successfully to: ${to}`);
     return true;
   } catch (error) {
-    console.error('❌ Error sending event ticket email:', error.message);
+    console.error('❌ Resend Error (Ticket):', error.message);
     return false;
   }
 };
@@ -186,7 +188,7 @@ export const sendEventCompletedEmail = async (to, userName, eventDetails) => {
   try {
     const mailOptions = {
       from: defaultFrom,
-      to,
+      to: to,
       subject: `How was ${title}? Rate your experience!`,
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 40px 20px;">
@@ -218,7 +220,7 @@ export const sendEventCompletedEmail = async (to, userName, eventDetails) => {
     console.log(`✅ Event completed email sent successfully to: ${to}`);
     return true;
   } catch (error) {
-    console.error('❌ Error sending completed email:', error.message);
+    console.error('❌ Resend Error (Completed):', error.message);
     return false;
   }
 };
@@ -229,7 +231,7 @@ export const sendEventCancelledEmail = async (to, userName, eventDetails, cancel
   try {
     const mailOptions = {
       from: defaultFrom,
-      to,
+      to: to,
       subject: `Update: ${title} has been Cancelled`,
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 40px 20px;">
@@ -266,7 +268,7 @@ export const sendEventCancelledEmail = async (to, userName, eventDetails, cancel
     console.log(`✅ Event cancelled email sent successfully to: ${to}`);
     return true;
   } catch (error) {
-    console.error('❌ Error sending cancelled email:', error.message);
+    console.error('❌ Resend Error (Cancelled):', error.message);
     return false;
   }
 };
