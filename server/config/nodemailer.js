@@ -1,41 +1,39 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Hardcode the SMTP settings here to fix the "Connection timeout" on Render
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // This single line replaces host, port, and secure settings!
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS, // Ensure this matches your Render variable exactly
-  },
-});
+// Initialize Resend with the API key you just generated
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// 🔴 CRITICAL RESEND RULE: On the free tier, you MUST use this exact 'from' address.
+// If you change this before verifying a custom domain, Resend will throw an error.
+const defaultFrom = 'JoinMe Support <onboarding@resend.dev>';
 
 export const sendWelcomeEmail = async (to, name) => {
-  const mailOptions = {
-    from: `"JoinMe Support" <${process.env.SMTP_USER}>`,
-    to: to,
-    subject: 'Welcome to JoinMe!',
-    html: `<p>Hi <b>${name}</b>,</p>
-           <p>Welcome to <b>JoinMe</b>! We're excited to have you onboard.</p>
-           <p>Get ready to connect, collaborate and explore!</p>
-           <br />
-           <p>Cheers,<br />The JoinMe Team</p>`
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: defaultFrom,
+      to: to, // Must be the email you registered Resend with while testing!
+      subject: 'Welcome to JoinMe!',
+      html: `<p>Hi <b>${name}</b>,</p>
+             <p>Welcome to <b>JoinMe</b>! We're excited to have you onboard.</p>
+             <p>Get ready to connect, collaborate and explore!</p>
+             <br />
+             <p>Cheers,<br />The JoinMe Team</p>`
+    });
     console.log("✅ Welcome email sent to", to);
+    return true;
   } catch (err) {
     console.error("❌ Error sending welcome email:", err.message);
+    return false;
   }
 };
 
 export const sendOTPEmailFunc = async (to, otp) => {
   try {
-    const mailOptions = {
-      from: `"JoinMe Support" <${process.env.SMTP_USER}>`,
+    await resend.emails.send({
+      from: defaultFrom,
       to: to,
       subject: 'Your OTP for JoinMe Verification',
       text: `Hi there,\n\nWelcome to JoinMe!\n\nYour OTP for verification is: ${otp}\n\nThis code is valid for the next 10 minutes. Please do not share it with anyone.\n\nNeed help or have questions? Just reply to this email.\n\nCheers,\nThe JoinMe Team`,
@@ -49,21 +47,19 @@ export const sendOTPEmailFunc = async (to, otp) => {
           <p>Cheers,<br>The JoinMe Team</p>
         </div>
       `
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
     console.log('✅ OTP email sent successfully');
     return true;
   } catch (error) {
-    console.error('❌ EXACT NODEMAILER ERROR:', error.message);
+    console.error('❌ EXACT RESEND ERROR:', error.message);
     return false;
   }
 };
 
 export const verifyOTPEmail = async (to, otp) => {
   try {
-    const mailOptions = {
-      from: `"JoinMe Support" <${process.env.SMTP_USER}>`,
+    await resend.emails.send({
+      from: defaultFrom,
       to: to,
       subject: 'Your OTP for JoinMe Verification',
       text: `Hi there,\n\nYour OTP for verification is: ${otp}\n\nThis code is valid for the next 10 minutes. Please do not share it with anyone.\n\nCheers,\nThe JoinMe Team`,
@@ -75,9 +71,7 @@ export const verifyOTPEmail = async (to, otp) => {
           <p>Cheers,<br>The JoinMe Team</p>
         </div>
       `
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
     console.log('✅ OTP verification email sent successfully');
     return true;
   } catch (error) {
@@ -88,8 +82,8 @@ export const verifyOTPEmail = async (to, otp) => {
 
 export const sendResetOTPEmailFunc = async (to, otp) => {
   try {
-    const mailOptions = {
-      from: `"JoinMe Support" <${process.env.SMTP_USER}>`,
+    await resend.emails.send({
+      from: defaultFrom,
       to,
       subject: 'Password Reset OTP - JoinMe',
       text: `Hello,\n\nWe received a request to reset your password on JoinMe.\n\nYour One-Time Password (OTP) is: ${otp}\n\nThis OTP is valid for the next 10 minutes. Please do not share it with anyone for your security.\n\nIf you didn’t request a password reset, you can safely ignore this email.\n\nBest regards,  \nThe JoinMe Team`,
@@ -106,9 +100,7 @@ export const sendResetOTPEmailFunc = async (to, otp) => {
           <p>Regards,<br><strong>The JoinMe Team</strong></p>
         </div>
       `
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
     console.log('✅ Password reset OTP email sent successfully to:', to);
     return true;
   } catch (error) {
@@ -126,8 +118,8 @@ export const sendEventTicketEmail = async (to, userName, eventDetails) => {
   });
 
   try {
-    const mailOptions = {
-      from: `"JoinMe Tickets" <${process.env.SMTP_USER}>`,
+    await resend.emails.send({
+      from: defaultFrom,
       to,
       subject: `🎫 Request Approved: You're in for ${title}!`,
       html: `
@@ -179,7 +171,7 @@ export const sendEventTicketEmail = async (to, userName, eventDetails) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send(mailOptions);
     console.log(`✅ Event ticket email sent successfully to: ${to}`);
     return true;
   } catch (error) {
@@ -193,7 +185,7 @@ export const sendEventCompletedEmail = async (to, userName, eventDetails) => {
   
   try {
     const mailOptions = {
-      from: `"JoinMe Updates" <${process.env.SMTP_USER}>`,
+      from: defaultFrom,
       to,
       subject: `How was ${title}? Rate your experience!`,
       html: `
@@ -222,7 +214,7 @@ export const sendEventCompletedEmail = async (to, userName, eventDetails) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send(mailOptions);
     console.log(`✅ Event completed email sent successfully to: ${to}`);
     return true;
   } catch (error) {
@@ -236,7 +228,7 @@ export const sendEventCancelledEmail = async (to, userName, eventDetails, cancel
   
   try {
     const mailOptions = {
-      from: `"JoinMe Updates" <${process.env.SMTP_USER}>`,
+      from: defaultFrom,
       to,
       subject: `Update: ${title} has been Cancelled`,
       html: `
@@ -270,7 +262,7 @@ export const sendEventCancelledEmail = async (to, userName, eventDetails, cancel
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send(mailOptions);
     console.log(`✅ Event cancelled email sent successfully to: ${to}`);
     return true;
   } catch (error) {
