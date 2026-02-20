@@ -39,10 +39,10 @@ export const register = async (req, res) => {
         const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         res.cookie('token', token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
-          maxAge: 7 * 24 * 60 * 60 * 1000, 
+        httpOnly: true,
+        secure: true, // 🟢 Hardcoded for cross-domain
+        sameSite: 'none', // 🟢 Hardcoded for cross-domain
+        maxAge: 7 * 24 * 60 * 60 * 1000, 
         });
 
         const newSafeUser = {
@@ -74,10 +74,10 @@ export const register = async (req, res) => {
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    secure: true, // 🟢 Hardcoded for cross-domain
+    sameSite: 'none', // 🟢 Hardcoded for cross-domain
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
 
     const newSafeUser = {
@@ -133,8 +133,8 @@ export const login = async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
+            secure: true, // 🟢 Hardcoded
+            sameSite: 'none', // 🟢 Hardcoded
             maxAge,
         });
 
@@ -164,8 +164,8 @@ export const logout = async (req, res) => {
     try {
         res.clearCookie('token', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
+            secure: true, // 🟢 Must match login exactly to successfully delete!
+            sameSite: 'none', 
         });
         return res.status(200).json({ success: true, message: 'Logout successful' });
     } catch (error) {

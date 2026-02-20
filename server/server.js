@@ -1,4 +1,4 @@
-import express, { json } from 'express';
+import express from 'express'; // Switched back to standard import for cleaner syntax
 import cors from 'cors';
 import 'dotenv/config';
 import cookieParser from 'cookie-parser';
@@ -16,14 +16,18 @@ import nodemailer from 'nodemailer';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// ✅ Step 2: Setup middleware
+// ✅ Step 2: Setup middleware (THE GOLDEN ORDER)
 connectDB();
-app.use(json());
-app.use(cookieParser());
+
+// 1️⃣ CORS MUST BE ABSOLUTELY FIRST
 app.use(cors({
   origin: process.env.FRONTEND_URL,
   credentials: true,
 }));
+
+// 2️⃣ THEN parse the bodies and cookies
+app.use(express.json());
+app.use(cookieParser());
 
 app.get('/test-mail', async (req, res) => {
   try {
