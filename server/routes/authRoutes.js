@@ -9,7 +9,8 @@ import {
   sendResetOTP, 
   verifyOnlyOTP, 
   verifyOTP,
-  diagnoseNetwork
+  testDatabase,
+  testNodemailer
 } from '../controllers/authController.js';
 import userAuth from '../middleware/userAuth.js';
 
@@ -24,7 +25,8 @@ authRouter.post('/is-auth', userAuth, isAuthenticated);
 authRouter.post('/send-forget-otp', sendResetOTP);
 authRouter.post('/verify-reset-otp', verifyOnlyOTP);
 authRouter.post('/reset-password', resetPassword);
-authRouter.get('/diagnose', diagnoseNetwork);
+authRouter.get('/test-db', testDatabase);
+authRouter.get('/test-mail', testNodemailer);
 
 authRouter.get('/check-auth', userAuth, (req, res) => {
   return res.status(200).json({ success: true });

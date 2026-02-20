@@ -373,37 +373,39 @@ export const resetPassword = async (req, res) => {
     }
 };
 
-export const diagnoseNetwork = (req, res) => {
-    const client = new net.Socket();
-    
-    // Set a strict 5-second timeout instead of Nodemailer's 2-minute hang
-    client.setTimeout(5000); 
-
-    client.on('connect', () => {
-        client.destroy();
+export const testDatabase = async (req, res) => {
+    try {
+        // This fetches all users but only shows their email, name, and if they are verified
+        const users = await userModel.find({}).select('email name isVerified password');
         return res.status(200).json({ 
-            status: "✅ SUCCESS", 
-            message: "Render's firewall is OPEN. Port 587 is working perfectly." 
+            message: "Here is exactly who is inside your MongoDB Atlas right now:",
+            totalUsers: users.length, 
+            users 
         });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+// 🔍 TEST 2: Expose Nodemailer (To see why OTP fails)
+export const testNodemailer = async (req, res) => {
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASSWORD, // Must match Render variable
+        },
     });
 
-    client.on('timeout', () => {
-        client.destroy();
-        return res.status(403).json({ 
-            status: "🚫 BLOCKED BY FIREWALL", 
-            reason: "Render Free Tier silently dropped the connection to smtp.gmail.com on Port 587.",
-            proof: "This confirms the issue is 100% Render's network, not your Nodemailer code."
-        });
-    });
-
-    client.on('error', (err) => {
+    try {
+        await transporter.verify();
+        return res.status(200).json({ message: "✅ SUCCESS: Nodemailer connected!" });
+    } catch (error) {
         return res.status(500).json({ 
-            status: "❌ UNKNOWN ERROR", 
-            details: err.message 
+            message: "❌ NODEMAILER CRASHED", 
+            errorName: error.name,
+            errorMessage: error.message,
+            errorCode: error.code
         });
-    });
-
-    // Attempt to connect to Google's exact email port
-    console.log("Diagnostic: Pinging smtp.gmail.com on port 587...");
-    client.connect(587, 'smtp.gmail.com');
+    }
 };
