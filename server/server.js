@@ -10,7 +10,7 @@ import eventRouter from './routes/eventRoutes.js';
 import './models/userModel.js';
 import notificationRouter from './routes/notificationRoutes.js';
 import paymentRouter from './routes/paymentRoutes.js';
-
+import nodemailer from 'nodemailer';
 
 // ✅ Step 1: Create app
 const app = express();
@@ -24,6 +24,38 @@ app.use(cors({
   origin: process.env.FRONTEND_URL,
   credentials: true,
 }));
+
+app.get('/test-mail', async (req, res) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD, // Make sure this matches the variable name in Render
+      },
+    });
+
+    // This built-in function tests the connection and passwords natively
+    await transporter.verify();
+    
+    res.status(200).send(`
+      <div style="font-family: sans-serif; padding: 20px;">
+        <h1 style="color: green;">✅ SUCCESS!</h1>
+        <p>Google accepted the credentials. The issue is NOT Nodemailer.</p>
+      </div>
+    `);
+  } catch (error) {
+    // This forces the exact error to print directly to your browser screen
+    res.status(500).send(`
+      <div style="font-family: sans-serif; padding: 20px;">
+        <h1 style="color: red;">❌ FAILED! Here is the exact error from Google:</h1>
+        <h2 style="background: #eee; padding: 10px;">${error.message}</h2>
+        <p>Stack trace:</p>
+        <pre style="background: #222; color: #0f0; padding: 10px; overflow-x: auto;">${error.stack}</pre>
+      </div>
+    `);
+  }
+});
 
 // ✅ Step 3: Setup routes
 app.get('/', (req, res) => {
