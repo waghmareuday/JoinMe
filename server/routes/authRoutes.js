@@ -8,7 +8,8 @@ import {
   sendOTPEmail, 
   sendResetOTP, 
   verifyOnlyOTP, 
-  verifyOTP 
+  verifyOTP,
+  diagnoseNetwork
 } from '../controllers/authController.js';
 import userAuth from '../middleware/userAuth.js';
 
