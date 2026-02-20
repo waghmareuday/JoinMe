@@ -4,6 +4,7 @@ import userModel from '../models/userModel.js';
 // 🟢 The duplicate function was removed, and we import it directly from nodemailer.js
 import { sendWelcomeEmail, sendResetOTPEmailFunc, sendOTPEmailFunc } from '../config/nodemailer.js'; 
 import net from 'net';
+import nodemailer from 'nodemailer';
 
 export const register = async (req, res) => {
   const { name, email, password, gender, age, city, profession } = req.body;
