@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Added useEffect
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utility/api';
@@ -14,8 +14,16 @@ const Login = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   
-  const { setUser } = useUser();
+  // 🟢 Destructure 'user' and 'loading' from context
+  const { user, setUser, loading: authLoading } = useUser();
   const navigate = useNavigate();
+
+  // 🟢 NEW: Redirect if already logged in (fixes the refresh-to-login loop)
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,8 +33,6 @@ const Login = ({ onLogin }) => {
       const res = await api.post('/auth/login', { email, password, rememberMe });
       if (res.data.success) {
         toast.success('Welcome back!');
-        setEmail('');
-        setPassword('');
         const userData = res.data.user || { email };
         setUser(userData);
         navigate('/dashboard');
@@ -35,12 +41,14 @@ const Login = ({ onLogin }) => {
         toast.error(res.data.message || 'Login failed!');
       }
     } catch (err) {
-      // This will now properly catch the 404/401 from your backend
       toast.error(err.response?.data?.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
+
+  // 🟢 Prevent the login form from showing while we verify the session
+  if (authLoading) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 font-sans">
@@ -54,7 +62,6 @@ const Login = ({ onLogin }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email Input */}
           <div className="space-y-1">
             <label className="block text-sm text-gray-700 font-medium">Email address</label>
             <div className="relative">
@@ -73,7 +80,6 @@ const Login = ({ onLogin }) => {
             </div>
           </div>
 
-          {/* Password Input */}
           <div className="space-y-1">
             <label className="block text-sm text-gray-700 font-medium">Password</label>
             <div className="relative">
@@ -99,7 +105,6 @@ const Login = ({ onLogin }) => {
             </div>
           </div>
 
-          {/* Options */}
           <div className="flex items-center justify-between text-sm">
             <label className="flex items-center gap-2 cursor-pointer group">
               <input
@@ -119,7 +124,6 @@ const Login = ({ onLogin }) => {
             </button>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             className="w-full py-3.5 rounded-xl bg-indigo-600 text-white font-bold text-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
@@ -142,7 +146,6 @@ const Login = ({ onLogin }) => {
         </div>
       </div>
 
-      {/* MODAL IS NOW OUTSIDE THE FORM */}
       <ForgotPasswordModal isOpen={showForgot} onClose={() => setShowForgot(false)} />
     </div>
   );
