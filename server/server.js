@@ -20,9 +20,20 @@ const PORT = process.env.PORT || 4000;
 connectDB();
 
 // 1️⃣ CORS MUST BE ABSOLUTELY FIRST
+const allowedOrigins = [
+  'https://joinme-theta.vercel.app', // Your exact live frontend URL
+  'http://localhost:5173', // Keep local development working just in case
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // 🟢 This is the magic flag that allows cookies to pass
 }));
 
 // 2️⃣ THEN parse the bodies and cookies
