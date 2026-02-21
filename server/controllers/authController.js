@@ -39,10 +39,10 @@ export const register = async (req, res) => {
         const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         res.cookie('token', token, {
-        httpOnly: true,
-        secure: true, // 🟢 Hardcoded for cross-domain
-        sameSite: 'none', // 🟢 Hardcoded for cross-domain
-        maxAge: 7 * 24 * 60 * 60 * 1000, 
+          httpOnly: true,
+          secure: true, 
+          sameSite: 'none', 
+          maxAge: 7 * 24 * 60 * 60 * 1000, 
         });
 
         const newSafeUser = {
@@ -57,7 +57,8 @@ export const register = async (req, res) => {
           averageRating: existingUser.averageRating || 0,
           totalRatings: existingUser.totalRatings || 0,
         };
-        return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser });
+        // 🟢 ADDED TOKEN HERE
+        return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser, token });
       }
 
       return res.status(400).json({ success: false, message: 'Please verify your email first' });
@@ -74,10 +75,10 @@ export const register = async (req, res) => {
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.cookie('token', token, {
-    httpOnly: true,
-    secure: true, // 🟢 Hardcoded for cross-domain
-    sameSite: 'none', // 🟢 Hardcoded for cross-domain
-    maxAge: 7 * 24 * 60 * 60 * 1000, 
+      httpOnly: true,
+      secure: true, 
+      sameSite: 'none', 
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
 
     const newSafeUser = {
@@ -93,14 +94,14 @@ export const register = async (req, res) => {
       totalRatings: newUser.totalRatings || 0,
     };
 
-    return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser });
+    // 🟢 ADDED TOKEN HERE
+    return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser, token });
 
   } catch (error) {
     console.error('Register error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
-
 
 export const login = async (req, res) => {
     const { email, password, rememberMe } = req.body;
@@ -133,8 +134,8 @@ export const login = async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: true, // 🟢 Hardcoded
-            sameSite: 'none', // 🟢 Hardcoded
+            secure: true, 
+            sameSite: 'none', 
             maxAge,
         });
 
@@ -151,7 +152,8 @@ export const login = async (req, res) => {
             totalRatings: user.totalRatings || 0,
         };
 
-        return res.status(200).json({ success: true, message: 'Login successful', user: safeUser });
+        // 🟢 ADDED TOKEN HERE
+        return res.status(200).json({ success: true, message: 'Login successful', user: safeUser, token });
 
     } catch (error) {
         console.error('Login error:', error);

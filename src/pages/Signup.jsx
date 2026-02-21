@@ -11,18 +11,15 @@ const Signup = () => {
   const navigate = useNavigate();
   const { setUser } = useUser();
 
-  // 🟢 Form States
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '', gender: '', age: '', city: '', profession: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 🟢 OTP States
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpSent, setOtpSent] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [timer, setTimer] = useState(0);
 
-  // 🟢 Timer Logic
   useEffect(() => {
     if (otpSent && timer > 0) {
       const interval = setInterval(() => setTimer(t => t - 1), 1000);
@@ -40,27 +37,23 @@ const Signup = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 🟢 Sleek OTP Input Handler
   const handleOtpChange = (index, value) => {
-    if (isNaN(value)) return; // Only allow numbers
+    if (isNaN(value)) return; 
     const updated = [...otp];
     updated[index] = value.slice(-1);
     setOtp(updated);
 
-    // Auto-focus next input
     if (value && index < 5) {
       document.getElementById(`otp-${index + 1}`)?.focus();
     }
   };
 
   const handleOtpKeyDown = (index, e) => {
-    // Auto-focus previous input on backspace
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       document.getElementById(`otp-${index - 1}`)?.focus();
     }
   };
 
-  // 🟢 API: Send OTP
   const handleVerifyEmail = async () => {
     if (!formData.email) {
       toast.error("Please enter your email first.");
@@ -72,7 +65,7 @@ const Signup = () => {
       if (res.data.success) {
         toast.success("OTP sent successfully to your email.");
         setOtpSent(true);
-        setTimer(300); // 5 minutes
+        setTimer(300); 
       } else {
         toast.error(res.data.message || 'Failed to send OTP');
       }
@@ -84,7 +77,6 @@ const Signup = () => {
     }
   };
 
-  // 🟢 API: Verify OTP
   const handleOtpVerify = async () => {
     const otpCode = otp.join('');
     if (otpCode.length !== 6) {
@@ -113,7 +105,6 @@ const Signup = () => {
     }
   };
 
-  // 🟢 API: Final Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -136,6 +127,12 @@ const Signup = () => {
 
       if (registerRes.data.success) {
         toast.success("Registration successful! Welcome to JoinMe 🎉");
+        
+        // 🟢 THE FIX: Safely store the Bearer token!
+        if (registerRes.data.token) {
+          localStorage.setItem('token', registerRes.data.token);
+        }
+
         const userData = registerRes.data.user || null;
         if (userData) setUser(userData); 
         navigate('/dashboard');
@@ -151,7 +148,6 @@ const Signup = () => {
   };
 
   return (
-    // 🟢 Changed background to simple gray-50, removed gradients and blobs
     <div className="min-h-screen flex items-center justify-center bg-gray-200 px-4 py-12 pt-24">
       <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl p-6 md:p-10 border border-gray-100 relative overflow-hidden">
         
@@ -162,7 +158,6 @@ const Signup = () => {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
           
-          {/* Name Row */}
           <div className="col-span-1">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">First Name</label>
             <div className="relative">
@@ -175,7 +170,6 @@ const Signup = () => {
             <input name="lastName" value={formData.lastName} onChange={handleChange} placeholder="Doe" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium" required />
           </div>
 
-          {/* Email & Verification Row */}
           <div className="col-span-1 md:col-span-2">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -191,14 +185,12 @@ const Signup = () => {
             </div>
           </div>
 
-          {/* Verified Badge */}
           {isVerified && (
             <div className="col-span-1 md:col-span-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm">
               <CheckCircle2 size={18} /> Email successfully verified!
             </div>
           )}
 
-          {/* OTP Block */}
           {otpSent && !isVerified && (
             <div className="col-span-1 md:col-span-2 bg-indigo-50 border border-indigo-100 p-5 rounded-2xl animate-fade-in-down">
               <label className="block text-center text-sm font-bold text-indigo-800 mb-3">Enter the 6-digit code sent to your email</label>
@@ -225,7 +217,6 @@ const Signup = () => {
             </div>
           )}
 
-          {/* Password */}
           <div className="col-span-1 md:col-span-2 relative mt-2">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Create Password</label>
             <div className="relative">
@@ -237,7 +228,6 @@ const Signup = () => {
             </div>
           </div>
 
-          {/* Demographics */}
           <div className="col-span-1">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Gender</label>
             <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none text-gray-700 font-medium" required>
@@ -272,7 +262,6 @@ const Signup = () => {
             </div>
           </div>
 
-          {/* Submit */}
           <button type="submit" disabled={loading || !isVerified} className="col-span-1 md:col-span-2 mt-4 w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
             {loading ? 'Processing...' : 'Complete Sign Up'}
           </button>

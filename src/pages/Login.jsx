@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Added useEffect
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utility/api';
@@ -14,11 +14,9 @@ const Login = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   
-  // 🟢 Destructure 'user' and 'loading' from context
   const { user, setUser, loading: authLoading } = useUser();
   const navigate = useNavigate();
 
-  // 🟢 NEW: Redirect if already logged in (fixes the refresh-to-login loop)
   useEffect(() => {
     if (!authLoading && user) {
       navigate('/dashboard', { replace: true });
@@ -33,6 +31,12 @@ const Login = ({ onLogin }) => {
       const res = await api.post('/auth/login', { email, password, rememberMe });
       if (res.data.success) {
         toast.success('Welcome back!');
+        
+        // 🟢 THE FIX: Safely store the Bearer token!
+        if (res.data.token) {
+          localStorage.setItem('token', res.data.token);
+        }
+
         const userData = res.data.user || { email };
         setUser(userData);
         navigate('/dashboard');
@@ -47,7 +51,6 @@ const Login = ({ onLogin }) => {
     }
   };
 
-  // 🟢 Prevent the login form from showing while we verify the session
   if (authLoading) return null;
 
   return (

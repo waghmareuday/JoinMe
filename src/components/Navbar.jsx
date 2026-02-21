@@ -4,8 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/userContext';
 import api from '../utility/api';
 import socket from '../utility/socket'; 
+import toast from 'react-hot-toast';
 
-// 🟢 Helper function for elegant timestamps
 const timeAgo = (date) => {
   const seconds = Math.floor((new Date() - new Date(date)) / 1000);
   let interval = seconds / 86400;
@@ -18,11 +18,10 @@ const timeAgo = (date) => {
 };
 
 const Navbar = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // 🟢 Added Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
   const [isScrolled, setIsScrolled] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   
-  // 🟢 Notification State
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -34,7 +33,6 @@ const Navbar = () => {
   const menuRef = useRef(null);
   const notifRef = useRef(null);
 
-  // 🟢 Intelligent Outside Click Handler
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) setShowProfileMenu(false);
@@ -44,18 +42,16 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Scroll effect for Glassmorphism
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 🟢 Fetch Notifications & Listen to WebSockets
   useEffect(() => {
     if (!loggedIn || !user) return;
 
-    api.get('/notification/my-notifications')
+    api.get('/notifications/my-notifications') // Ensure this matches your backend route exactly
       .then(res => {
         if (res.data?.success) {
           setNotifications(res.data.notifications);
@@ -75,10 +71,9 @@ const Navbar = () => {
     return () => socket.off('newNotification', handleNewNotification);
   }, [loggedIn, user]);
 
-  // 🟢 Mark As Read Actions
   const markAsRead = async (id) => {
     try {
-      await api.put('/notification/read', { notificationId: id });
+      await api.put('/notifications/read', { notificationId: id });
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) { console.error(err); }
@@ -86,16 +81,30 @@ const Navbar = () => {
 
   const markAllAsRead = async () => {
     try {
-      await api.put('/notification/read', {});
+      await api.put('/notifications/read', {});
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (err) { console.error(err); }
   };
 
-  const handleLogout = () => {
+  // 🟢 The Ultimate Logout Fix
+  const handleLogout = async () => {
     setShowProfileMenu(false);
     setIsMobileMenuOpen(false);
+    
+    try {
+      // Ping backend to clear any stray cookies just in case
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error("Backend logout ping failed, logging out locally anyway");
+    }
+
+    // Nuke the local storage and state
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
+    
+    toast.success("Logged out successfully");
     navigate('/');
   };
 
@@ -107,7 +116,6 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 sm:h-20">
           
-          {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 sm:space-x-3 group z-50">
             <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 group-hover:shadow-lg group-hover:shadow-indigo-500/30 transition-all">
               <Users className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
@@ -117,11 +125,9 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Navigation Items */}
           {loggedIn ? (
             <div className="flex items-center gap-2 sm:gap-4">
               
-              {/* 🟢 NOTIFICATION BELL SYSTEM */}
               <div className="relative" ref={notifRef}>
                 <button 
                   onClick={() => setShowNotifMenu(!showNotifMenu)}
@@ -133,7 +139,6 @@ const Navbar = () => {
                   )}
                 </button>
 
-                {/* Dropdown UI - Made Screen Safe for Mobile */}
                 {showNotifMenu && (
                   <div className="absolute right-0 mt-3 w-[90vw] max-w-[360px] sm:max-w-sm bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-50 animate-fade-in origin-top-right flex flex-col max-h-[75vh]">
                     <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
@@ -180,7 +185,6 @@ const Navbar = () => {
                 )}
               </div>
 
-              {/* PROFILE MENU */}
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -192,7 +196,6 @@ const Navbar = () => {
                   <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${showProfileMenu ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown UI - Made Screen Safe for Mobile */}
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-3 w-56 sm:w-64 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-50 animate-fade-in origin-top-right">
                     <div className="px-5 py-3 border-b border-gray-100 mb-2 bg-gray-50/50">
@@ -222,7 +225,6 @@ const Navbar = () => {
             </div>
           ) : (
             <>
-              {/* DESKTOP: Logged Out Actions */}
               <div className="hidden md:flex items-center space-x-6">
                 <Link to="/login" className="font-bold text-gray-600 hover:text-indigo-600 transition-colors">Login</Link>
                 <Link to="/signup" className="px-6 py-2.5 rounded-xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all">
@@ -230,7 +232,6 @@ const Navbar = () => {
                 </Link>
               </div>
 
-              {/* MOBILE: Hamburger Button */}
               <div className="md:hidden flex items-center">
                 <button 
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
@@ -244,7 +245,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* 🟢 MOBILE MENU DRAWER (Only shows for Logged Out users on small screens) */}
       {!loggedIn && (
         <div className={`md:hidden absolute top-16 left-0 w-full bg-white shadow-xl border-b border-gray-100 transition-all duration-300 origin-top overflow-hidden ${isMobileMenuOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="p-5 flex flex-col gap-3 bg-gray-50/50">
