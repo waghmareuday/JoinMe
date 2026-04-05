@@ -112,13 +112,19 @@ const socketUserMap = new Map();
 io.on('connection', (socket) => {
   console.log(`[Socket] Connected: ${socket.id}`);
 
-  // FIXED: Single joinUser handler that joins BOTH room formats for compatibility
+  // Standardized joinUser handler
   socket.on('joinUser', (userId) => {
     if (!userId) return;
     socketUserMap.set(socket.id, String(userId));
-    socket.join(String(userId));           // For legacy notification compatibility
-    socket.join(`user:${userId}`);         // For new features (ratings, reminders)
-    console.log(`[Socket] ${socket.id} joined user rooms for: ${userId}`);
+    socket.join(`user:${userId}`);
+    console.log(`[Socket] ${socket.id} joined user: ${userId}`);
+  });
+
+  socket.on('leaveUser', (userId) => {
+    if (!userId) return;
+    socket.leave(`user:${userId}`);
+    socketUserMap.delete(socket.id);
+    console.log(`[Socket] ${socket.id} left user: ${userId}`);
   });
   
   socket.on('joinCity', async (city) => {

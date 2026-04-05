@@ -97,6 +97,9 @@ const Navbar = () => {
     }
 
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    socket.emit('leaveUser', user._id || user.id);
+    socket.disconnect();
     setUser(null);
 
     toast.success("Logged out successfully");
@@ -187,8 +190,23 @@ const Navbar = () => {
                               {!notif.isRead && <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white dark:border-slate-900"></div>}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-sm leading-snug ${notif.isRead ? 'text-gray-600 dark:text-slate-400' : 'text-gray-900 dark:text-white font-bold'}`}>
-                                {notif.message}
+                              <p className={`text-sm leading-snug ${notif.isRead ? 'text-gray-600 dark:text-slate-400' : 'text-gray-900 dark:text-white font-semibold'}`}>
+                                {notif.sender?.name ? (
+                                  <>
+                                    <span className="font-black text-indigo-600 dark:text-indigo-400">{notif.sender.name}</span>
+                                    {notif.message.toLowerCase().includes('wants to join') && ' wants to join '}
+                                    {notif.message.toLowerCase().includes('re-requested') && ' re-requested '}
+                                    {notif.message.toLowerCase().includes('joined via') && ' joined '}
+                                    {notif.message.toLowerCase().includes('approved') && ' approved your request for '}
+                                    {notif.message.toLowerCase().includes('declined') && ' declined your request for '}
+                                    {notif.message.toLowerCase().includes('removed') && ' removed you from '}
+                                    {notif.message.toLowerCase().includes('completed') && ' completed '}
+                                    {notif.message.toLowerCase().includes('cancelled') && ' cancelled '}
+                                    <span className="font-bold">"{notif.relatedEvent?.title || notif.message.split(': ').pop()}"</span>
+                                  </>
+                                ) : (
+                                  notif.message
+                                )}
                               </p>
                               <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5 flex items-center gap-1 font-medium">
                                 <Clock size={12} /> {timeAgo(notif.createdAt)}

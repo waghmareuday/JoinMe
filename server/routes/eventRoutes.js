@@ -143,7 +143,8 @@ router.put('/edit/:eventId', userAuth, async (req, res) => {
         relatedEvent: eventId,
       });
       await notif.save();
-      if (io) io.to(`user:${guest.user}`).emit('newNotification', notif);
+      const populatedNotif = await Notification.findById(notif._id).populate('sender', 'name').populate('relatedEvent', 'title').lean();
+      if (io) io.to(`user:${guest.user}`).emit('newNotification', populatedNotif);
     }
 
     res.status(200).json({ success: true, message: 'Event updated', event: updatedEvent });
@@ -197,8 +198,9 @@ router.post('/request/:id', userAuth, async (req, res) => {
           relatedEvent: event._id,
         });
         await notif.save();
+        const populatedNotif = await Notification.findById(notif._id).populate('sender', 'name').populate('relatedEvent', 'title').lean();
         const io = req.app.get('io');
-        if (io) io.to(String(event.creator)).emit('newNotification', notif);
+        if (io) io.to(`user:${event.creator}`).emit('newNotification', populatedNotif);
 
         return res.status(200).json({ success: true, message: "Re-request sent to host!" });
       }
@@ -225,9 +227,10 @@ router.post('/request/:id', userAuth, async (req, res) => {
       relatedEvent: event._id
     });
     await newNotif.save();
+    const populatedNotif = await Notification.findById(newNotif._id).populate('sender', 'name').populate('relatedEvent', 'title').lean();
 
     const io = req.app.get('io');
-    if (io) io.to(String(event.creator)).emit('newNotification', newNotif);
+    if (io) io.to(`user:${event.creator}`).emit('newNotification', populatedNotif);
 
     res.status(200).json({ success: true, message: "Request sent to host successfully!" });
   } catch (error) {
@@ -338,9 +341,10 @@ router.put('/respond/:eventId', userAuth, async (req, res) => {
       relatedEvent: event._id,
     });
     await notif.save();
+    const populatedNotif = await Notification.findById(notif._id).populate('sender', 'name').populate('relatedEvent', 'title').lean();
 
     const io = req.app.get('io');
-    if (io) io.to(`user:${userId}`).emit('newNotification', notif);
+    if (io) io.to(`user:${userId}`).emit('newNotification', populatedNotif);
 
     if (status === 'approved') {
       const requestingUser = event.requests[requestIndex].user;
@@ -402,10 +406,11 @@ router.put('/remove-guest/:eventId', userAuth, async (req, res) => {
       relatedEvent: event._id,
     });
     await notif.save();
+    const populatedNotif = await Notification.findById(notif._id).populate('sender', 'name').populate('relatedEvent', 'title').lean();
 
     const io = req.app.get('io');
     if (io) {
-      io.to(`user:${userId}`).emit('newNotification', notif);
+      io.to(`user:${userId}`).emit('newNotification', populatedNotif);
       io.to(`user:${userId}`).emit('removedFromEvent', { eventId: event._id });
     }
 
@@ -442,7 +447,8 @@ router.put('/remove-guest/:eventId', userAuth, async (req, res) => {
               relatedEvent: event._id,
             });
             await promoteNotif.save();
-            if (io) io.to(`user:${bestCandidate._id}`).emit('newNotification', promoteNotif);
+            const populatedNotif = await Notification.findById(promoteNotif._id).populate('sender', 'name').populate('relatedEvent', 'title').lean();
+            if (io) io.to(`user:${bestCandidate._id}`).emit('newNotification', populatedNotif);
           }
         }
         await event.save();
@@ -585,8 +591,9 @@ router.put('/status', userAuth, async (req, res) => {
         relatedEvent: event._id,
       });
       await notif.save();
+      const populatedNotif = await Notification.findById(notif._id).populate('sender', 'name').populate('relatedEvent', 'title').lean();
       const io = req.app.get('io');
-      if (io) io.to(`user:${guest._id}`).emit('newNotification', notif);
+      if (io) io.to(`user:${guest._id}`).emit('newNotification', populatedNotif);
     }
 
     // Create activity feed entry

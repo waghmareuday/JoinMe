@@ -9,6 +9,8 @@ export const getMyNotifications = async (req, res) => {
 
     const [notifications, total, unreadCount] = await Promise.all([
       Notification.find({ recipient: req.user.id })
+        .populate('sender', 'name')
+        .populate('relatedEvent', 'title')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
