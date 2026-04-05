@@ -41,7 +41,9 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 // CORS
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://thejoinme.vercel.app',
   'https://joinme-theta.vercel.app',
+  'https://thejoinme.vercel.app/',
   'http://localhost:5173',
 ].filter(Boolean);
 
