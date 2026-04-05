@@ -35,7 +35,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
         toast.error(res.data.message || 'Failed to send OTP');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'User not found!');
+      toast.error(err.response?.data?.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }

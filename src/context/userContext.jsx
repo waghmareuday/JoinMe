@@ -6,10 +6,8 @@ import socket from '../utility/socket';
 export const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  // JM-009: Initialize state as null and rely entirely on the /auth/is-auth call.
+  const [user, setUser] = useState(null);
   
   const [loading, setLoading] = useState(true);
 

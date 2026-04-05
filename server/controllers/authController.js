@@ -4,7 +4,13 @@ import { OAuth2Client } from 'google-auth-library';
 import userModel from '../models/userModel.js';
 import { sendWelcomeEmail, sendResetOTPEmailFunc, sendOTPEmailFunc } from '../config/nodemailer.js';
 
+import crypto from 'crypto';
 const googleClient = new OAuth2Client(process.env.OAUTH_CLIENT_ID);
+
+const validateEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 
 export const register = async (req, res) => {
   const { name, email, password, gender, age, city, profession } = req.body;
@@ -13,15 +19,26 @@ export const register = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
   }
 
+  if (!validateEmail(email)) {
+    return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+  }
+
+  // JM-004: Server-side password strength validation (min 8 characters)
+  if (password.length < 8) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+  }
+
   try {
     let existingUser = await userModel.findOne({ email });
 
     if (existingUser) {
-      const isTemp = existingUser.name === 'Temp' || existingUser.password === 'dummyPassword123!';
+      // JM-007: Check for temp user (name='Temp' or password doesn't match dummy string, though we'll remove dummy)
+      const isTemp = existingUser.name === 'Temp' || existingUser.isVerified === false;
       const isFullyRegistered = existingUser.isVerified && !isTemp;
 
+      // JM-008: Account Enumeration prevention — generic success message
       if (isFullyRegistered) {
-        return res.status(409).json({ success: false, message: 'User already exists' });
+        return res.status(200).json({ success: true, message: 'If this email is not registered, an OTP will be sent to it.' });
       }
 
       // Temp user who completed OTP verification
@@ -57,45 +74,14 @@ export const register = async (req, res) => {
           averageRating: existingUser.averageRating || 0,
           totalRatings: existingUser.totalRatings || 0,
         };
-        // ⚡ SECURITY: Token is now handled exclusively via HttpOnly cookies for web
         return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser });
       }
 
-      return res.status(400).json({ success: false, message: 'Please verify your email first' });
+      return res.status(400).json({ success: false, message: 'Please verify your email via OTP first' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new userModel({
-      name, email, password: hashedPassword, gender: gender || 'Not specified', age: age || 0, city: city || '', profession: profession || '', isVerified: true,
-    });
-
-    await newUser.save();
-    await sendWelcomeEmail(email, name);
-
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: true, 
-      sameSite: 'none', 
-      maxAge: 7 * 24 * 60 * 60 * 1000, 
-    });
-
-    const newSafeUser = {
-      _id: newUser._id,
-      name: newUser.name,
-      email: newUser.email,
-      gender: newUser.gender,
-      age: newUser.age,
-      city: newUser.city,
-      profession: newUser.profession,
-      isVerified: newUser.isVerified,
-      averageRating: newUser.averageRating || 0,
-      totalRatings: newUser.totalRatings || 0,
-    };
-
-    // ⚡ SECURITY: Token is now handled exclusively via HttpOnly cookies for web
-    return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser });
+    // JM-001: Prevent direct API registration without OTP record
+    return res.status(400).json({ success: false, message: 'Please verify your email via OTP first' });
 
   } catch (error) {
     console.error('Register error:', error);
@@ -111,7 +97,9 @@ export const login = async (req, res) => {
     }
 
     try {
+        const startTime = Date.now();
         const user = await userModel.findOne({ email });
+        const dbTime = Date.now() - startTime;
 
         if (!user) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
@@ -121,7 +109,11 @@ export const login = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Please verify your email before logging in' });
         }
 
+        const hashStart = Date.now();
         const isMatch = await bcrypt.compare(password, user.password);
+        const hashTime = Date.now() - hashStart;
+
+        console.log(`[Login Perf] Email: ${email} | DB: ${dbTime}ms | Hash: ${hashTime}ms`);
 
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
@@ -199,16 +191,22 @@ export const sendOTPEmail = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Email is required' });
   }
 
+  if (!validateEmail(email)) {
+    return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+  }
+
   try {
     let user = await userModel.findOne({ email });
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + 10 * 60 * 1000;
 
     if (!user) {
+      // JM-007: Hash random password for temp user instead of plaintext dummy
+      const randomPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
       user = new userModel({
         name: 'Temp',
         email,
-        password: 'dummyPassword123!',
+        password: randomPassword,
         gender: '',
         age: 0,
         city: '',

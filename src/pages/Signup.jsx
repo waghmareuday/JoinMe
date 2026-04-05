@@ -62,9 +62,11 @@ const Signup = () => {
     try {
       const res = await api.post('/auth/send-otp', { email: formData.email });
       if (res.data.success) {
-        toast.success("OTP sent successfully to your email.");
+        toast.success(otpSent ? "New OTP sent successfully!" : "OTP sent successfully to your email.");
         setOtpSent(true);
         setTimer(300);
+        // JM-010: Clear OTP input boxes on resend
+        setOtp(['', '', '', '', '', '']);
       } else {
         toast.error(res.data.message || 'Failed to send OTP');
       }
@@ -207,8 +209,8 @@ const Signup = () => {
                   <input type="email" name="email" value={formData.email} onChange={handleChange} disabled={isVerified || otpSent} placeholder="john@example.com" className={`${inputClasses} disabled:opacity-60`} required />
                 </div>
                 {!isVerified && (
-                  <button type="button" onClick={handleVerifyEmail} disabled={loading || otpSent || !formData.email} className="px-6 py-3.5 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl transition-all disabled:opacity-50 whitespace-nowrap border border-indigo-100 dark:border-indigo-800 text-sm">
-                    {otpSent ? 'OTP Sent' : 'Verify Email'}
+                  <button type="button" onClick={handleVerifyEmail} disabled={loading || (otpSent && timer > 0) || !formData.email} className={`px-6 py-3.5 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl transition-all disabled:opacity-50 whitespace-nowrap border border-indigo-100 dark:border-indigo-800 text-sm`}>
+                    {otpSent ? (timer > 0 ? 'OTP Sent' : 'Resend OTP') : 'Verify Email'}
                   </button>
                 )}
               </div>
@@ -240,10 +242,23 @@ const Signup = () => {
                   ))}
                 </div>
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Expires in: <span className="font-bold text-red-500">{formatTime(timer)}</span></p>
-                  <button type="button" onClick={handleOtpVerify} disabled={loading} className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all text-sm">
-                    Confirm Code
-                  </button>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {timer > 0 ? (
+                      <>Expires in: <span className="font-bold text-red-500">{formatTime(timer)}</span></>
+                    ) : (
+                      <span className="text-red-500 font-bold">OTP Expired</span>
+                    )}
+                  </p>
+                  <div className="flex gap-2">
+                    {timer === 0 && (
+                       <button type="button" onClick={handleVerifyEmail} disabled={loading} className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 font-bold rounded-xl hover:bg-gray-200 transition-all text-xs">
+                         Resend
+                       </button>
+                    )}
+                    <button type="button" onClick={handleOtpVerify} disabled={loading || timer === 0} className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all text-sm disabled:opacity-50">
+                      Confirm Code
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

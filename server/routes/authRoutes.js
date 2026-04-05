@@ -19,7 +19,7 @@ const authRouter = express.Router();
 // Auth routes with rate limiting
 authRouter.post('/register', authLimiter, register);
 authRouter.post('/login', authLimiter, login);
-authRouter.post('/logout', logout);
+authRouter.post('/logout', userAuth, logout);
 authRouter.post('/send-otp', otpLimiter, sendOTPEmail);
 authRouter.post('/verify-otp', otpLimiter, verifyOTP);
 authRouter.post('/is-auth', userAuth, isAuthenticated);

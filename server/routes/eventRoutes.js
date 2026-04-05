@@ -28,6 +28,11 @@ router.post('/create', userAuth, invalidateCache('events', 'categories', 'trendi
       }
     }
 
+    // JM-015: Validate paid event amount
+    if (eventData.isPaid && (!eventData.amount || Number(eventData.amount) <= 0)) {
+        return res.status(400).json({ success: false, message: 'Amount is required for paid events' });
+    }
+
     // Validate date is in the future
     const eventDate = new Date(eventData.date);
     if (eventDate < new Date()) {
@@ -477,9 +482,23 @@ router.get('/my-events', userAuth, async (req, res) => {
       Event.countDocuments(filter),
     ]);
 
+    // JM-003: Privacy Fix — Only host should see guest emails
+    const sanitizedEvents = events.map(event => {
+      const isHost = String(event.creator._id || event.creator) === String(userId);
+      if (!isHost && event.requests) {
+        event.requests = event.requests.map(req => {
+          if (req.user && req.user.email) {
+            delete req.user.email;
+          }
+          return req;
+        });
+      }
+      return event;
+    });
+
     res.status(200).json({ 
       success: true, 
-      events, 
+      events: sanitizedEvents, 
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     });
   } catch (error) {

@@ -60,6 +60,11 @@ export const verifyPayment = async (req, res) => {
     if (session.payment_status === 'paid') {
       const { eventId, userId } = session.metadata;
 
+      // JM-002: Ownership check — ensure calling user matches the one who paid
+      if (String(userId) !== String(req.user.id)) {
+        return res.status(403).json({ success: false, message: "Unauthorized: Patient ownership mismatch." });
+      }
+
       const event = await Event.findById(eventId);
       if (!event) return res.status(404).json({ success: false, message: "Event not found" });
 
@@ -97,6 +102,11 @@ export const refundPayment = async (req, res) => {
     
     if (session.payment_status !== 'paid' || !session.payment_intent) {
       return res.status(400).json({ success: false, message: "No paid session found to refund" });
+    }
+
+    // JM-005: Ownership check — ensure calling user matches the original payer
+    if (String(session.metadata.userId) !== String(req.user.id)) {
+      return res.status(403).json({ success: false, message: "Unauthorized: You can only refund your own payments." });
     }
 
     const refund = await stripe.refunds.create({
