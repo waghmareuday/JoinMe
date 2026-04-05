@@ -66,7 +66,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
 
     setLoading(true);
     try {
-      const res = await api.post('/auth/reset-password', { email, newPassword });
+      const res = await api.post('/auth/reset-password', { email, otp, newPassword });
       if (res.data.success) {
         toast.success('Password changed successfully! Please login.');
         onClose();
@@ -99,14 +99,14 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm transition-all p-4">
       {/* We use a div here instead of a form to prevent any accidental bubbling */}
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-gray-100" aria-busy={loading}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full p-8 border border-gray-100 dark:border-slate-800" aria-busy={loading}>
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-800">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white">
             {step === 'email' ? 'Forgot Password' : step === 'otp' ? 'Enter OTP' : 'Reset Password'}
           </h3>
           <button 
             type="button" 
-            className="text-gray-400 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100" 
+            className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800" 
             onClick={onClose}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -115,10 +115,10 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
 
         {step === 'email' && (
           <div className="space-y-5">
-            <p className="text-sm text-gray-600">Enter your registered email address and we'll send you an OTP to reset your password.</p>
+            <p className="text-sm text-gray-600 dark:text-slate-400">Enter your registered email address and we'll send you an OTP to reset your password.</p>
             <input
               type="email"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               placeholder="you@example.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -126,7 +126,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
               disabled={loading}
             />
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" className="px-5 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors" onClick={onClose} disabled={loading}>Cancel</button>
+              <button type="button" className="px-5 py-2.5 rounded-xl font-medium text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" onClick={onClose} disabled={loading}>Cancel</button>
               <button
                 type="button"
                 className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
@@ -139,10 +139,10 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
 
         {step === 'otp' && (
           <div className="space-y-5">
-            <p className="text-sm text-gray-600">We sent a 6-digit code to <span className="font-semibold text-gray-800">{email}</span>.</p>
+            <p className="text-sm text-gray-600 dark:text-slate-400">We sent a 6-digit code to <span className="font-semibold text-gray-800 dark:text-white">{email}</span>.</p>
             <input
               type="text"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center tracking-widest text-lg font-bold transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center tracking-widest text-lg font-bold transition-all"
               placeholder="000000"
               maxLength="6"
               value={otp}
@@ -153,7 +153,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
             <div className="flex justify-between items-center pt-2">
               <button type="button" className="text-sm font-semibold text-indigo-600 hover:text-indigo-800" onClick={resend} disabled={loading}>Resend Code</button>
               <div className="flex gap-3">
-                <button type="button" className="px-5 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors" onClick={() => setStep('email')} disabled={loading}>Back</button>
+                <button type="button" className="px-5 py-2.5 rounded-xl font-medium text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" onClick={() => setStep('email')} disabled={loading}>Back</button>
                 <button
                   type="button"
                   className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
@@ -167,10 +167,10 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
 
         {step === 'reset' && (
           <div className="space-y-5">
-            <p className="text-sm text-gray-600">Secure your account with a new password.</p>
+            <p className="text-sm text-gray-600 dark:text-slate-400">Secure your account with a new password.</p>
             <input
               type="password"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               placeholder="New password (min 6 chars)"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
@@ -179,14 +179,14 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
             />
             <input
               type="password"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               placeholder="Confirm new password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               disabled={loading}
             />
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" className="px-5 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors" onClick={() => setStep('otp')} disabled={loading}>Back</button>
+              <button type="button" className="px-5 py-2.5 rounded-xl font-medium text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" onClick={() => setStep('otp')} disabled={loading}>Back</button>
               <button
                 type="button"
                 className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"

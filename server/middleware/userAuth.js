@@ -1,24 +1,27 @@
 import jwt from 'jsonwebtoken';
+import { isTokenBlacklisted } from '../config/redis.js';
 
-const userAuth = (req, res, next) => {
-    console.log(`\n🛑 [AUTH CHECK] Intercepted: ${req.method} ${req.originalUrl}`);
-    console.log("👉 Origin:", req.headers.origin);
-    console.log("👉 All Cookies Received by Express:", req.cookies);
-
+const userAuth = async (req, res, next) => {
     const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
 
     if (!token) {
-        console.log("❌ AUTH FAILED: The browser sent zero tokens.");
         return res.status(401).json({ success: false, message: 'Unauthorized access: No token provided' });
     }
 
     try {
+        // Check Redis blacklist (logged-out tokens)
+        const blacklisted = await isTokenBlacklisted(token);
+        if (blacklisted) {
+            return res.status(401).json({ success: false, message: 'Token has been revoked. Please login again.' });
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded;
-        console.log("✅ AUTH SUCCESS: Access granted to User ID ->", req.user.id);
         next();
     } catch (error) {
-        console.log("❌ AUTH FAILED: Token is invalid or expired ->", error.message);
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ success: false, message: 'Token expired, please login again' });
+        }
         return res.status(401).json({ success: false, message: 'Invalid token' });
     }
 }

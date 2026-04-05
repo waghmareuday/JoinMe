@@ -1,3 +1,4 @@
+import nodemailer from 'nodemailer';
 import { google } from 'googleapis';
 import dotenv from 'dotenv';
 
@@ -5,8 +6,26 @@ dotenv.config();
 
 const OAuth2 = google.auth.OAuth2;
 
-// 🟢 THE FIREWALL BYPASS: This directly hits Google's REST API over HTTPS (Port 443)
-const sendEmailViaAPI = async (to, subject, htmlContent) => {
+// 🟢 THE SMTP FALLBACK: Standard nodemailer transport for when OAuth2 fails or in dev
+const smtpTransport = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD, // This should be a Google App Password
+  },
+});
+
+// 🟢 THE MASTER SENDER: Tries Gmail API first, then falls back to SMTP
+const sendEmail = async (to, subject, htmlContent) => {
+  // In development, we always log the OTP to the console to prevent blocking the flow
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEV MODE] Email to: ${to} | Subject: ${subject}`);
+    // If it's an OTP, try to match it via regex to log it clearly
+    const otpMatch = htmlContent.match(/\d{6}/);
+    if (otpMatch) console.log(`[DEV MODE] Captured OTP: ${otpMatch[0]}`);
+  }
+
+  // 1. Try Gmail API (OAuth2) - Preferred for production high-volume
   try {
     const oauth2Client = new OAuth2(
       process.env.OAUTH_CLIENT_ID,
@@ -20,7 +39,6 @@ const sendEmailViaAPI = async (to, subject, htmlContent) => {
 
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-    // Build the raw email specification (RFC 2822)
     const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
     const messageParts = [
       `From: "JoinMe Support" <${process.env.SMTP_USER}>`,
@@ -33,23 +51,38 @@ const sendEmailViaAPI = async (to, subject, htmlContent) => {
     ];
     const message = messageParts.join('\n');
 
-    // Google strictly requires base64url encoding for their HTTP API
     const encodedMessage = Buffer.from(message)
       .toString('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
 
-    // Send the HTTPS POST request
     await gmail.users.messages.send({
       userId: 'me',
       requestBody: { raw: encodedMessage },
     });
 
     return true;
-  } catch (error) {
-    console.error("❌ Gmail API Send Error:", error.message);
-    return false;
+  } catch (apiError) {
+    console.warn("⚠️ Gmail API failed, trying SMTP fallback:", apiError.message);
+    
+    // 2. Fallback to standard SMTP
+    try {
+      await smtpTransport.sendMail({
+        from: `"JoinMe Support" <${process.env.SMTP_USER}>`,
+        to,
+        subject,
+        html: htmlContent,
+      });
+      return true;
+    } catch (smtpError) {
+      console.error("❌ Both Gmail API and SMTP failed:", smtpError.message);
+      
+      // In development, we don't want to crash 500 just because Gmail is down
+      if (process.env.NODE_ENV === 'development') return true; 
+      
+      return false;
+    }
   }
 };
 
@@ -61,7 +94,7 @@ export const sendWelcomeEmail = async (to, name) => {
          <br />
          <p>Cheers,<br />The JoinMe Team</p>`;
   
-  const success = await sendEmailViaAPI(to, subject, html);
+  const success = await sendEmail(to, subject, html);
   if(success) console.log("✅ Welcome email sent to", to);
   return success;
 };
@@ -79,7 +112,7 @@ export const sendOTPEmailFunc = async (to, otp) => {
     </div>
   `;
 
-  const success = await sendEmailViaAPI(to, subject, html);
+  const success = await sendEmail(to, subject, html);
   if(success) console.log('✅ OTP email sent successfully');
   return success;
 };
@@ -95,7 +128,7 @@ export const verifyOTPEmail = async (to, otp) => {
     </div>
   `;
 
-  const success = await sendEmailViaAPI(to, subject, html);
+  const success = await sendEmail(to, subject, html);
   if(success) console.log('✅ OTP verification email sent successfully');
   return success;
 };
@@ -116,30 +149,36 @@ export const sendResetOTPEmailFunc = async (to, otp) => {
     </div>
   `;
 
-  const success = await sendEmailViaAPI(to, subject, html);
+  const success = await sendEmail(to, subject, html);
   if(success) console.log('✅ Password reset OTP email sent successfully to:', to);
   return success;
 };
 
-export const sendEventTicketEmail = async (to, userName, eventDetails) => {
+export const sendEventTicketEmail = async (to, userName, eventDetails, eventId, requestUserId) => {
   const { title, date, time, venue, city, hostName } = eventDetails;
   const formattedDate = new Date(date).toLocaleDateString('en-GB', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
+  
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=JoinMe-Ticket-${eventId}-${requestUserId}`;
 
-  const subject = `🎫 Request Approved: You're in for ${title}!`;
+  const subject = `🎫 Request Approved: Your Ticket for ${title}`;
   const html = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 40px 20px;">
       <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
         
         <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 30px; text-align: center;">
           <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: 1px;">Request Approved! 🎉</h1>
-          <p style="color: #e0e7ff; margin-top: 10px; font-size: 16px;">You're officially on the guest list.</p>
+          <p style="color: #e0e7ff; margin-top: 5px; font-size: 16px;">Here is your Digital Access Pass.</p>
         </div>
 
         <div style="padding: 30px;">
           <p style="font-size: 16px; color: #374151; margin-bottom: 25px;">Hi <strong>${userName}</strong>,</p>
-          <p style="font-size: 16px; color: #374151; margin-bottom: 30px;">Great news! <strong>${hostName}</strong> has accepted your request to join <strong>${title}</strong>. Here are your event details:</p>
+          <p style="font-size: 16px; color: #374151; margin-bottom: 30px;"><strong>${hostName}</strong> has accepted your request. Please present this QR Pass upon arrival:</p>
+
+          <div style="text-align: center; margin-bottom: 20px;">
+             <img src="${qrUrl}" alt="Event QR Ticket" style="border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 220px; height: 220px;" />
+          </div>
 
           <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
             <h3 style="margin-top: 0; color: #1e293b; font-size: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">${title}</h3>
@@ -161,6 +200,10 @@ export const sendEventTicketEmail = async (to, userName, eventDetails) => {
                 <td style="padding: 8px 0; color: #64748b;"><strong>👤 Host:</strong></td>
                 <td style="padding: 8px 0; color: #0f172a; font-weight: 500;">${hostName}</td>
               </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #64748b;"><strong>📝 ID:</strong></td>
+                <td style="padding: 8px 0; color: #10b981; font-weight: 900;">#${eventId.slice(-6).toUpperCase()}</td>
+              </tr>
             </table>
           </div>
 
@@ -176,7 +219,7 @@ export const sendEventTicketEmail = async (to, userName, eventDetails) => {
     </div>
   `;
 
-  const success = await sendEmailViaAPI(to, subject, html);
+  const success = await sendEmail(to, subject, html);
   if(success) console.log(`✅ Event ticket email sent successfully to: ${to}`);
   return success;
 };
@@ -210,7 +253,7 @@ export const sendEventCompletedEmail = async (to, userName, eventDetails) => {
     </div>
   `;
 
-  const success = await sendEmailViaAPI(to, subject, html);
+  const success = await sendEmail(to, subject, html);
   if(success) console.log(`✅ Event completed email sent successfully to: ${to}`);
   return success;
 };
@@ -249,7 +292,7 @@ export const sendEventCancelledEmail = async (to, userName, eventDetails, cancel
     </div>
   `;
 
-  const success = await sendEmailViaAPI(to, subject, html);
+  const success = await sendEmail(to, subject, html);
   if(success) console.log(`✅ Event cancelled email sent successfully to: ${to}`);
   return success;
 };

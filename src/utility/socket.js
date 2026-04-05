@@ -4,15 +4,33 @@ import { io } from 'socket.io-client';
 const SOCKET_URL = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== 'undefined'
   ? import.meta.env.VITE_API_URL 
   : 'https://joinme-qf56.onrender.com';
+let isConnecting = false;
 const raw = io(SOCKET_URL, { autoConnect: false, withCredentials: true });
 
-raw.on('connect', () => console.log('Socket connected', raw.id));
-raw.on('disconnect', (reason) => console.log('Socket disconnected', reason));
-raw.on('connect_error', (err) => console.error('Socket connect_error', err.message));
+raw.on('connect', () => {
+    isConnecting = false;
+    console.log('Socket connected', raw.id);
+});
+raw.on('connect_error', (err) => {
+    isConnecting = false;
+    console.error('Socket connect_error', err.message);
+});
+raw.on('disconnect', (reason) => {
+    isConnecting = false;
+    console.log('Socket disconnected', reason);
+});
 
 const socket = {
-  connect: () => { if (!raw.connected) raw.connect(); },
-  disconnect: () => { if (raw.connected) raw.disconnect(); },
+  connect: () => { 
+    if (!raw.connected && !isConnecting) {
+      isConnecting = true;
+      raw.connect(); 
+    }
+  },
+  disconnect: () => { 
+    isConnecting = false;
+    if (raw.connected) raw.disconnect(); 
+  },
   on: (ev, cb) => raw.on(ev, cb),
   off: (ev, cb) => raw.off(ev, cb),
   emit: (ev, payload) => raw.emit(ev, payload),

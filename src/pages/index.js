@@ -5,3 +5,5 @@ export { default as Signup } from './Signup';
 export { default as About } from './About';
 export { default as Features } from './Features';
 export { default as ComingSoon } from './ComingSoon';
+export { default as Analytics } from './Analytics';
+export { default as Leaderboard } from './Leaderboard';

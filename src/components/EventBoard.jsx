@@ -30,19 +30,16 @@ const EventBoard = ({ selectedCity = '' }) => {
     fetchEvents(selectedCity);
   }, [refresh, selectedCity]);
 
-  useEffect(() => {
-    const interval = setInterval(() => fetchEvents(selectedCity), 5000);
-    return () => clearInterval(interval);
-  }, [selectedCity]);
+  // Removed 5-second polling — socket handles real-time updates
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4 sm:px-10">
+    <div className="min-h-screen bg-gray-100 dark:bg-slate-950 py-10 px-4 sm:px-10">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-700">🎯 Event Board</h1>
+          <h1 className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">🎯 Event Board</h1>
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow hover:bg-indigo-700 transition"
           >
             <PlusCircle size={20} /> Add Event
           </button>
@@ -50,7 +47,7 @@ const EventBoard = ({ selectedCity = '' }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {events.length === 0 ? (
-            <p className="text-gray-500">No events posted yet.</p>
+            <p className="text-gray-500 dark:text-slate-400">No events posted yet.</p>
           ) : (
             events.map(event => (
               <EventCard

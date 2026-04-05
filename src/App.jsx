@@ -1,11 +1,16 @@
 import React from 'react';
 import { Toaster } from 'react-hot-toast';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import AppRouter from './AppRouter';
 import { UserProvider } from './context/userContext';
+import { ThemeProvider } from './context/themeContext';
+
+const GOOGLE_CLIENT_ID = '288235910182-37h17do7t8d2v60fgturmlicp7kk6phl.apps.googleusercontent.com';
 
 const App = () => (
-  <UserProvider>
-    {/* 🟢 The Master Toaster: This catches and displays all toasts across your entire app */}
+  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+  <ThemeProvider>
+    <UserProvider>
     <Toaster 
       position="top-center" 
       reverseOrder={false} 
@@ -35,7 +40,9 @@ const App = () => (
       }}
     />
     <AppRouter />
-  </UserProvider>
+    </UserProvider>
+  </ThemeProvider>
+  </GoogleOAuthProvider>
 );
 
 export default App;

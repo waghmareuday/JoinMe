@@ -43,7 +43,7 @@ const EventChatModal = ({ event, onClose }) => {
     fetchMessages();
 
     // Join the specific event's socket room
-    socket.connect();
+    // socket.connect() removed; globally managed by UserProvider
     socket.emit('joinEventChat', event._id);
 
     // Listen for incoming messages
@@ -83,20 +83,20 @@ const EventChatModal = ({ event, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-gray-50 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative flex flex-col h-[80vh] border border-gray-200">
+      <div className="bg-gray-50 dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative flex flex-col h-[80vh] border border-gray-200 dark:border-slate-700">
         
         {/* Header */}
-        <div className="bg-white px-6 py-4 flex items-center justify-between shadow-sm z-10">
+        <div className="bg-white dark:bg-slate-800 px-6 py-4 flex items-center justify-between shadow-sm z-10">
           <div className="flex items-center gap-3">
-            <div className="bg-indigo-100 p-2 rounded-full text-indigo-600">
+            <div className="bg-indigo-100 dark:bg-indigo-500/20 p-2 rounded-full text-indigo-600 dark:text-indigo-400">
               <MessageCircle size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 text-lg leading-tight">{event.title}</h3>
+              <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight">{event.title}</h3>
               <p className="text-xs text-green-500 font-medium">Live Chat</p>
             </div>
           </div>
-          <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded-full transition-all">
+          <button onClick={onClose} className="bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-600 dark:text-slate-300 p-2 rounded-full transition-all">
             <X size={18} />
           </button>
         </div>
@@ -124,7 +124,7 @@ const EventChatModal = ({ event, onClose }) => {
                   <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl shadow-sm text-sm relative ${
                     isMe 
                     ? 'bg-indigo-600 text-white rounded-br-sm' 
-                    : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm'
+                    : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 border border-gray-100 dark:border-slate-700 rounded-bl-sm'
                   }`}>
                     <p className="leading-relaxed">{msg.text}</p>
                     <span className={`text-[9px] block text-right mt-1 ${isMe ? 'text-indigo-200' : 'text-gray-400'}`}>
@@ -139,14 +139,14 @@ const EventChatModal = ({ event, onClose }) => {
         </div>
 
         {/* Input Area */}
-        <div className="bg-white p-4 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] z-10">
+        <div className="bg-white dark:bg-slate-800 p-4 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] z-10">
           <form onSubmit={handleSendMessage} className="flex items-center gap-2 relative">
             <input 
               type="text" 
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message..." 
-              className="flex-1 bg-gray-100 border-transparent focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 px-4 py-3 rounded-full outline-none transition-all text-sm"
+              className="flex-1 bg-gray-100 dark:bg-slate-700 border-transparent focus:bg-white dark:focus:bg-slate-600 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-500/20 px-4 py-3 rounded-full outline-none transition-all text-sm dark:text-white dark:placeholder-slate-400"
             />
             <button 
               type="submit" 

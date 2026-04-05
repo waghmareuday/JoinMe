@@ -3,15 +3,12 @@ import toast from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL + '/api', 
-  // We don't need withCredentials anymore!
+  withCredentials: true, // ⚡ SECURITY: Replaces manual token injection with secure HttpOnly cookies
 });
 
-// 🟢 THE MASTER KEY INJECTOR: Attaches the token to every single request automatically
+// We no longer manually inject the token into headers. 
+// The browser handles sending the 'token' cookie automatically with each request.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
   return config;
 }, (error) => {
   return Promise.reject(error);

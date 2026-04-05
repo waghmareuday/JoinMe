@@ -1,6 +1,9 @@
 import eventModel from "../models/eventModel.js";
 import userModel from '../models/userModel.js';
-import { sendEventCompletedEmail, sendEventCancelledEmail } from "../config/nodemailer.js";
+import Notification from '../models/notificationModel.js';
+import Activity from '../models/activityModel.js';
+import { sendEventTicketEmail, sendEventCompletedEmail, sendEventCancelledEmail } from "../config/nodemailer.js";
+import { checkAndGrantBadges } from '../utils/badgeEngine.js';
 
 // ==========================================
 // 🟢 1. GET ALL EVENTS (For Explore Hub)
@@ -172,7 +175,9 @@ export const respondEventRequest = async (req, res) => {
     }
 
     // We populate so we can compare IDs safely and get emails
-    const event = await eventModel.findById(eventId).populate('requests.user', 'name email');
+    const event = await eventModel.findById(eventId)
+        .populate('requests.user', 'name email')
+        .populate('creator', 'name');
     
     if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
 
@@ -192,8 +197,26 @@ export const respondEventRequest = async (req, res) => {
     event.requests[requestIndex].status = status;
     await event.save();
 
-    // NOTE: If you have an approval email template, you can trigger it here using:
-    // const guestEmail = event.requests[requestIndex].user.email;
+    if (status === 'approved') {
+        const guestUser = event.requests[requestIndex].user;
+        const hostName = typeof event.creator === 'object' ? event.creator.name : 'Host';
+        
+        // Dispatch Digital QR Pass 
+        sendEventTicketEmail(
+            guestUser.email,
+            guestUser.name,
+            {
+                title: event.title,
+                date: event.date,
+                time: event.time,
+                venue: event.venue,
+                city: event.city,
+                hostName: hostName
+            },
+            event._id.toString(),
+            guestUser._id.toString()
+        ).catch(err => console.log('QR Ticket Email async error:', err));
+    }
 
     return res.status(200).json({ success: true, message: `Guest ${status} successfully` });
   } catch (err) {
@@ -231,9 +254,57 @@ export const updateEventStatus = async (req, res) => {
     event.status = newStatus;
     await event.save();
 
+    // Update host stats
+    if (newStatus === 'completed') {
+      await userModel.findByIdAndUpdate(userId, { $inc: { eventsCompleted: 1 } });
+      // Update trust score
+      const host = await userModel.findById(userId);
+      if (host && typeof host.computeTrustScore === 'function') {
+        host.computeTrustScore();
+        await host.save();
+      }
+      // Check badges for host and all approved guests
+      const io = req.app.get('io');
+      checkAndGrantBadges(userId, io).catch(() => {});
+      const guestIds = event.requests
+        .filter(r => r.status === 'approved' && r.user)
+        .map(r => r.user._id || r.user);
+      for (const gId of guestIds) {
+        checkAndGrantBadges(String(gId), io).catch(() => {});
+      }
+    } else if (newStatus === 'cancelled') {
+      await userModel.findByIdAndUpdate(userId, { $inc: { eventsCancelled: 1 } });
+      const host = await userModel.findById(userId);
+      if (host && typeof host.computeTrustScore === 'function') {
+        host.computeTrustScore();
+        await host.save();
+      }
+    }
+
+    // Notify all approved guests
     const approvedGuests = event.requests
         .filter(req => req.status === 'approved' && req.user && req.user.email)
         .map(req => req.user);
+
+    for (const guest of approvedGuests) {
+      const notif = new Notification({
+        recipient: guest._id,
+        sender: userId,
+        type: newStatus === 'completed' ? 'event_completed' : 'event_cancelled',
+        message: `"${event.title}" has been ${newStatus}${newStatus === 'cancelled' && cancelReason ? ': ' + cancelReason : ''}`,
+        relatedEvent: event._id,
+      });
+      await notif.save();
+    }
+
+    // Create activity feed entry
+    Activity.create({
+      type: newStatus === 'completed' ? 'event_completed' : 'event_cancelled',
+      actor: userId,
+      message: `"${event.title}" was ${newStatus}`,
+      relatedEvent: event._id,
+      city: event.city,
+    }).catch(() => {});
 
     if (approvedGuests.length > 0) {
         const eventDetails = { title: event.title, hostName: event.creator.name };

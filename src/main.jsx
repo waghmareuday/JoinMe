@@ -9,3 +9,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>
 );
+
+// Service Worker registration removed — no sw.js file exists in /public/

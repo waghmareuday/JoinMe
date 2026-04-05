@@ -22,7 +22,6 @@ export const UserProvider = ({ children }) => {
           localStorage.setItem('user', JSON.stringify(newVal));
         } else {
           localStorage.removeItem('user');
-          localStorage.removeItem('token'); 
         }
         return newVal;
       });
@@ -32,7 +31,6 @@ export const UserProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(userData));
       } else {
         localStorage.removeItem('user');
-        localStorage.removeItem('token');
       }
     }
   };
@@ -40,15 +38,8 @@ export const UserProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
     const fetchUser = async () => {
-      // ⚡ SPEED BOOST: If there is no token, don't ping the backend. Instantly load the app!
-      const token = localStorage.getItem('token');
-      if (!token) {
-        if (mounted) {
-          handleSetUser(null);
-          setLoading(false);
-        }
-        return;
-      }
+      // ⚡ SECURITY: We no longer check localStorage for a token. 
+      // The HttpOnly cookie is automatically sent to /auth/is-auth.
 
       try {
         const res = await api.post('/auth/is-auth');
@@ -83,7 +74,7 @@ export const UserProvider = ({ children }) => {
 
     return () => {
       socket.off('userRated', handleUserRated);
-      socket.disconnect(); 
+      // Don't disconnect the shared socket - other components may still need it
     };
   }, [user?._id]); 
 

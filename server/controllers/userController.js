@@ -1,6 +1,8 @@
 import userModel from '../models/userModel.js';
 import mongoose from 'mongoose';
 import eventModel from '../models/eventModel.js';
+import Notification from '../models/notificationModel.js';
+import { checkAndGrantBadges } from '../utils/badgeEngine.js';
 
 export const getUserData = async (req, res) => {
     try {
@@ -14,11 +16,13 @@ export const getUserData = async (req, res) => {
         return res.status(200).json({
             success: true,
             userData: {
-                _id: user._id,       // 🟢 THE FIX: Now React knows who you are!
+                _id: user._id,
                 name: user.name,
-                email: user.email,   // Added for future NodeMailer tickets
-                city: user.city,     // Added for Dashboard filtering
+                email: user.email,
+                city: user.city,
                 isVerified: user.isVerified,
+                trustScore: user.trustScore || 50,
+                availability: user.availability || [],
             }
         });
     } catch (error) {
@@ -30,13 +34,21 @@ export const getUserData = async (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { bio, city, profession, age, gender } = req.body;
+        const { bio, city, profession, age, gender, availability } = req.body;
+
+        const updateData = {};
+        if (bio !== undefined) updateData.bio = bio;
+        if (city !== undefined) updateData.city = city;
+        if (profession !== undefined) updateData.profession = profession;
+        if (age !== undefined) updateData.age = age;
+        if (gender !== undefined) updateData.gender = gender;
+        if (availability !== undefined) updateData.availability = availability;
 
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
-            { bio, city, profession, age, gender },
-            { new: true, runValidators: true } // Returns the newly updated document
-        ).select('-password'); // Exclude password from the returned object
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-password');
 
         if (!updatedUser) {
             return res.status(404).json({ success: false, message: 'User not found' });
@@ -61,7 +73,7 @@ export const getPublicProfile = async (req, res) => {
 
         // 2. Fetch the user
         const user = await userModel.findById(id)
-            .select('name bio city profession age gender averageRating totalRatings');
+            .select('name bio city profession age gender averageRating totalRatings trustScore eventsHosted eventsCompleted');
             
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found in database' });
@@ -92,13 +104,25 @@ export const rateUser = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Event ID is required to submit a rating' });
         }
 
-        // 🟢 1. Check if the event exists and if the user already rated it
+        // 1. Check if the event exists and is completed
         const event = await eventModel.findById(eventId);
         if (!event) {
             return res.status(404).json({ success: false, message: 'Event not found' });
         }
+        if (event.status !== 'completed') {
+            return res.status(400).json({ success: false, message: 'You can only rate after the event is completed.' });
+        }
         if (event.ratedBy.includes(raterId)) {
             return res.status(400).json({ success: false, message: 'You have already rated the host for this event.' });
+        }
+
+        // Verify the rater was an approved attendee or the host
+        const isHost = String(event.creator) === String(raterId);
+        const isApprovedGuest = event.requests.some(
+            r => String(r.user) === String(raterId) && r.status === 'approved'
+        );
+        if (!isHost && !isApprovedGuest) {
+            return res.status(403).json({ success: false, message: 'Only event participants can rate.' });
         }
 
         // 🟢 2. Fetch target user and calculate new math
@@ -115,13 +139,26 @@ export const rateUser = async (req, res) => {
 
         targetUser.averageRating = newAverage;
         targetUser.totalRatings = newTotal;
+        // Recompute trust score
+        if (typeof targetUser.computeTrustScore === 'function') {
+            targetUser.computeTrustScore();
+        }
         await targetUser.save();
 
-        // 🟢 3. Lock the rating so they can't spam it again
+        // Lock the rating so they can't spam it again
         event.ratedBy.push(raterId);
         await event.save();
 
-        // 🟢 4. Notify the rated user in real-time (if they're connected)
+        // Notify the rated user
+        const notif = new Notification({
+            recipient: targetUserId,
+            sender: raterId,
+            type: 'user_rated',
+            message: `Someone rated you ${rating}/5 for "${event.title}"`,
+            relatedEvent: eventId,
+        });
+        await notif.save();
+
         try {
             const io = req.app.get('io');
             if (io) {
@@ -130,10 +167,17 @@ export const rateUser = async (req, res) => {
                     averageRating: targetUser.averageRating,
                     totalRatings: targetUser.totalRatings
                 });
+                io.to(`user:${targetUserId}`).emit('newNotification', notif);
             }
         } catch (emitErr) {
-            console.error('Failed to emit userRated socket event:', emitErr);
+            // Non-critical - continue
         }
+
+        // Check badges for the rated user (might earn 5-star host, top rated, etc.)
+        try {
+            const io = req.app.get('io');
+            checkAndGrantBadges(targetUserId, io).catch(() => {});
+        } catch (_) {}
 
         return res.status(200).json({ 
             success: true, 
