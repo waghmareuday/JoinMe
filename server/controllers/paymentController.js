@@ -62,7 +62,7 @@ export const verifyPayment = async (req, res) => {
 
       // JM-002: Ownership check — ensure calling user matches the one who paid
       if (String(userId) !== String(req.user.id)) {
-        return res.status(403).json({ success: false, message: "Unauthorized: Patient ownership mismatch." });
+        return res.status(403).json({ success: false, message: "Unauthorized: Payment ownership mismatch." });
       }
 
       const event = await Event.findById(eventId);

@@ -140,6 +140,7 @@ const Dashboard = () => {
           q.set('city', selectedCity);
           if (category !== 'All') q.set('category', category);
           if (search) q.set('search', search);
+          if (selectedDate) q.set('date', selectedDate);
 
           const res = await api.get(`/event/all?${q.toString()}`);
           if (res.data?.success) setEvents(res.data.events || []);
@@ -307,7 +308,9 @@ const Dashboard = () => {
                 <div className="flex-1 w-full">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800 dark:text-white tracking-tight">{viewMode === 'explore' ? `Your Hub — ${selectedCity}` : 'Your Dashboard'}</h2>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800 dark:text-white tracking-tight">
+                        {viewMode === 'explore' ? `Your Hub — ${selectedCity}` : viewMode === 'forYou' ? 'Recommended for You' : 'Your Dashboard'}
+                      </h2>
                       <p className="text-gray-600 dark:text-slate-400 mt-1 text-sm sm:text-base">Hello {firstName}, {slogans[0]}</p>
                     </div>
                     {viewMode === 'explore' && (
@@ -382,6 +385,34 @@ const Dashboard = () => {
                     <h4 className="text-xl font-black text-gray-900 dark:text-white mb-2">Be the pioneer!</h4>
                     <p className="text-gray-500 dark:text-slate-400 font-medium max-w-sm text-center mb-6">Looks like no one has posted in this category yet. This is your chance to own the spotlight.</p>
                     <button onClick={() => setOpenPostModal(true)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all hover:scale-105 active:scale-95">Post the First Event</button>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* FOR YOU MODE: Smart Feed (JM-016) */}
+          {viewMode === 'forYou' && (
+            <section className="mb-10 min-h-[50vh]">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg">
+                   <Sparkles size={18} className="text-indigo-600 dark:text-indigo-400" />
+                 </div>
+                 <h3 className="text-xl sm:text-2xl font-black text-gray-800 dark:text-white">AI-Powered Picks</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {loading ? (
+                  <>{[1, 2, 3].map(i => <SkeletonCard key={i} />)}</>
+                ) : displayedEvents.length > 0 ? displayedEvents.map((event) => (
+                  <EventCard key={event._id} event={event} bgImage={categoryMenu.find(c => c.category === event.category)?.bgImage || turfImg} onClick={() => setSelectedEvent(event)} />
+                )) : (
+                  <div className="col-span-full py-16 flex flex-col items-center justify-center bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm transition-all animate-fade-in">
+                    <div className="w-20 h-20 bg-indigo-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6">
+                      <Sparkles className="text-indigo-500" size={32} />
+                    </div>
+                    <h4 className="text-xl font-black text-gray-900 dark:text-white mb-2">Finding your vibe...</h4>
+                    <p className="text-gray-500 dark:text-slate-400 font-medium max-w-sm text-center mb-8 px-4">We're learning your preferences! Try joining a few events or listing your interests in your profile for a more personalized feed.</p>
+                    <button onClick={() => { setViewMode('explore'); setCategory('All'); }} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95">Explore All Events</button>
                   </div>
                 )}
               </div>

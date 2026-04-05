@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../utility/api';
 import { CITIES, CATEGORIES } from '../constants/cities';
 
-const PostEventModal = ({ open, onClose, defaultCategory = '', defaultCity = 'Nagpur' }) => {
+const PostEventModal = ({ open, onClose, defaultCategory = '', defaultCity = '' }) => {
   if (!open) return null;
 
   // --- Form State ---
@@ -22,8 +22,8 @@ const PostEventModal = ({ open, onClose, defaultCategory = '', defaultCity = 'Na
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!title || !date || !time || !venue || !requiredPeople) {
-      toast.error("Please fill in all required fields (Title, Date, Time, Venue, People)");
+    if (!title || !city || !date || !time || !venue || !requiredPeople) {
+      toast.error("Please fill in all required fields (Title, City, Date, Time, Venue, People)");
       return;
     }
     if (new Date(`${date}T${time}`) <= new Date()) {

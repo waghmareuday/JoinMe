@@ -61,9 +61,6 @@ const Navbar = () => {
         }
       }).catch(err => console.error("Failed to fetch notifications:", err));
 
-    // socket.connect() removed; globally managed by UserProvider
-    socket.emit('joinUser', user._id || user.id);
-
     const handleNewNotification = (notif) => {
       setNotifications(prev => [notif, ...prev]);
       setUnreadCount(prev => prev + 1);
@@ -99,7 +96,6 @@ const Navbar = () => {
       console.error("Backend logout ping failed, logging out locally anyway");
     }
 
-    localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
 

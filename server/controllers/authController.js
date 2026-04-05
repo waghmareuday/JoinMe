@@ -36,9 +36,9 @@ export const register = async (req, res) => {
       const isTemp = existingUser.name === 'Temp' || existingUser.isVerified === false;
       const isFullyRegistered = existingUser.isVerified && !isTemp;
 
-      // JM-008: Account Enumeration prevention — generic success message
+      // JM-008: Account Enumeration prevention — generic error message (NEW-01: Corrected success state)
       if (isFullyRegistered) {
-        return res.status(200).json({ success: true, message: 'If this email is not registered, an OTP will be sent to it.' });
+        return res.status(400).json({ success: false, message: 'Email address already exists. Please verify your identity.' });
       }
 
       // Temp user who completed OTP verification
@@ -113,7 +113,7 @@ export const login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         const hashTime = Date.now() - hashStart;
 
-        console.log(`[Login Perf] Email: ${email} | DB: ${dbTime}ms | Hash: ${hashTime}ms`);
+        console.log(`[Login Perf] DB: ${dbTime}ms | Hash: ${hashTime}ms`);
 
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });

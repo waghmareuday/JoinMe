@@ -5,11 +5,13 @@ import userAuth from '../middleware/userAuth.js';
 import User from '../models/userModel.js';
 import { sendEventTicketEmail } from '../config/nodemailer.js';
 import Message from '../models/messageModel.js';
-import { updateEventStatus } from '../controllers/eventController.js';
 import Notification from '../models/notificationModel.js';
 import Activity from '../models/activityModel.js';
 import { rankEventsForUser, getRecommendations } from '../utils/smartMatch.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
+import sanitize from 'sanitize-html';
+import { sendEventCompletedEmail, sendEventCancelledEmail } from "../config/nodemailer.js";
+import { checkAndGrantBadges } from '../utils/badgeEngine.js';
 
 const router = express.Router();
 
@@ -508,16 +510,126 @@ router.get('/my-events', userAuth, async (req, res) => {
 });
 
 // ==========================================
-// 8. UPDATE EVENT STATUS (Complete/Cancel)
+// 8. UPDATE EVENT STATUS (Complete/Cancel) (JM-012: Inlined)
 // ==========================================
-router.put('/status', userAuth, updateEventStatus);
+router.put('/status', userAuth, async (req, res) => {
+  try {
+    let { eventId, newStatus, cancelReason } = req.body;
+    const userId = req.user.id;
+
+    if (!['completed', 'cancelled'].includes(newStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid status update' });
+    }
+
+    // JM-011: Sanitize and limit cancelReason
+    if (cancelReason) {
+        cancelReason = sanitize(cancelReason, {
+            allowedTags: [],
+            allowedAttributes: {}
+        }).trim().substring(0, 200);
+    }
+
+    const event = await Event.findById(eventId)
+        .populate('requests.user', 'name email')
+        .populate('creator', 'name'); 
+
+    if (!event) return res.status(404).json({ success: false, message: 'Event not found' });
+
+    if (String(event.creator._id || event.creator) !== String(userId)) {
+      return res.status(403).json({ success: false, message: 'Only the host can update this event' });
+    }
+
+    if (event.status === 'completed' || event.status === 'cancelled') {
+        return res.status(400).json({ success: false, message: `Event is already ${event.status}` });
+    }
+
+    event.status = newStatus;
+    await event.save();
+
+    // Update host stats
+    if (newStatus === 'completed') {
+      await User.findByIdAndUpdate(userId, { $inc: { eventsCompleted: 1 } });
+      const host = await User.findById(userId);
+      if (host && typeof host.computeTrustScore === 'function') {
+        host.computeTrustScore();
+        await host.save();
+      }
+      const io = req.app.get('io');
+      checkAndGrantBadges(userId, io).catch(() => {});
+      const guestIds = event.requests
+        .filter(r => r.status === 'approved' && r.user)
+        .map(r => r.user._id || r.user);
+      for (const gId of guestIds) {
+        checkAndGrantBadges(String(gId), io).catch(() => {});
+      }
+    } else if (newStatus === 'cancelled') {
+      await User.findByIdAndUpdate(userId, { $inc: { eventsCancelled: 1 } });
+      const host = await User.findById(userId);
+      if (host && typeof host.computeTrustScore === 'function') {
+        host.computeTrustScore();
+        await host.save();
+      }
+    }
+
+    // Notify all approved guests
+    const approvedGuests = event.requests
+        .filter(req => req.status === 'approved' && req.user && req.user.email)
+        .map(req => req.user);
+
+    for (const guest of approvedGuests) {
+      const notif = new Notification({
+        recipient: guest._id,
+        sender: userId,
+        type: newStatus === 'completed' ? 'event_completed' : 'event_cancelled',
+        message: `"${event.title}" has been ${newStatus}${newStatus === 'cancelled' && cancelReason ? ': ' + cancelReason : ''}`,
+        relatedEvent: event._id,
+      });
+      await notif.save();
+      const io = req.app.get('io');
+      if (io) io.to(`user:${guest._id}`).emit('newNotification', notif);
+    }
+
+    // Create activity feed entry
+    Activity.create({
+      type: newStatus === 'completed' ? 'event_completed' : 'event_cancelled',
+      actor: userId,
+      message: `"${event.title}" was ${newStatus}`,
+      relatedEvent: event._id,
+      city: event.city,
+    }).catch(() => {});
+
+    if (approvedGuests.length > 0) {
+        const eventDetails = { 
+          title: event.title, 
+          hostName: event.creator.name, 
+          date: event.date,
+          time: event.time,
+          venue: event.venue,
+          city: event.city
+        };
+        const emailPromises = approvedGuests.map(async (guest) => {
+            if (newStatus === 'completed') {
+                return sendEventCompletedEmail(guest.email, guest.name, eventDetails);
+            } else if (newStatus === 'cancelled') {
+                return sendEventCancelledEmail(guest.email, guest.name, eventDetails, cancelReason);
+            }
+        });
+        await Promise.all(emailPromises).catch(err => console.error('Email batch error:', err));
+    }
+
+    return res.status(200).json({ success: true, message: `Event successfully marked as ${newStatus}`, event });
+  } catch (err) {
+    console.error('Error updating event status:', err.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 // ==========================================
 // 9. GET ALL EVENTS (Explore Hub) - PAGINATED
 // ==========================================
 router.get('/all', cacheMiddleware(60, 'events'), async (req, res) => {
   try {
-    const { city, category, search } = req.query;
+    const { city, category, search, date } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
@@ -528,6 +640,12 @@ router.get('/all', cacheMiddleware(60, 'events'), async (req, res) => {
     
     if (city) query.city = { $regex: new RegExp(`^${city.trim()}$`, 'i') };
     if (category && category !== 'All') query.category = category;
+    if (date) {
+      const d = new Date(date);
+      const startOfDay = new Date(d.setUTCHours(0, 0, 0, 0));
+      const endOfDay = new Date(d.setUTCHours(23, 59, 59, 999));
+      query.date = { $gte: startOfDay, $lte: endOfDay };
+    }
     if (search) {
       const sanitized = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
