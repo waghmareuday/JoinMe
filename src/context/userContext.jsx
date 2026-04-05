@@ -12,14 +12,16 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // 🟢 Automatically wipes the token if user is set to null
-  const handleSetUser = (userData) => {
+  const handleSetUser = (userData, token = null) => {
     if (typeof userData === 'function') {
       setUser((prev) => {
         const newVal = userData(prev);
         if (newVal) {
           localStorage.setItem('user', JSON.stringify(newVal));
+          if (token) localStorage.setItem('token', token);
         } else {
           localStorage.removeItem('user');
+          localStorage.removeItem('token');
         }
         return newVal;
       });
@@ -27,8 +29,10 @@ export const UserProvider = ({ children }) => {
       setUser(userData);
       if (userData) {
         localStorage.setItem('user', JSON.stringify(userData));
+        if (token) localStorage.setItem('token', token);
       } else {
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
       }
     }
   };
@@ -77,7 +81,7 @@ export const UserProvider = ({ children }) => {
   }, [user?._id]); 
 
   return (
-    <UserContext.Provider value={{ user, setUser: handleSetUser, loading }}>
+    <UserContext.Provider value={{ user, setUser: handleSetUser, handleSetUser, loading }}>
       {children}
     </UserContext.Provider>
   );

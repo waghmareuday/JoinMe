@@ -32,8 +32,8 @@ const Login = ({ onLogin }) => {
       const res = await api.post('/auth/login', { email, password, rememberMe });
       if (res.data.success) {
         toast.success('Welcome back!');
-        const userData = res.data.user;
-        setUser(userData);
+        const { user: userData, token } = res.data;
+        setUser(userData, token);
 
         // Immediate redirection check for onboarding
         const isIncomplete = !userData.age || userData.age === 0 || !userData.city || !userData.gender;
@@ -58,8 +58,8 @@ const Login = ({ onLogin }) => {
       const res = await api.post('/auth/google', { credential: credentialResponse.credential });
       if (res.data.success) {
         toast.success(res.data.message || 'Welcome!');
-        const userData = res.data.user;
-        setUser(userData);
+        const { user: userData, token } = res.data;
+        setUser(userData, token);
         
         // Immediate redirection check for onboarding
         const isIncomplete = !userData.age || userData.age === 0 || !userData.city || !userData.gender;

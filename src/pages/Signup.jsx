@@ -120,9 +120,9 @@ const Signup = () => {
       });
       if (registerRes.data.success) {
         toast.success("Registration successful! Welcome to JoinMe");
-        const userData = registerRes.data.user || null;
+        const { user: userData, token } = registerRes.data;
         if (userData) {
-          setUser(userData);
+          setUser(userData, token);
           // Check if profile is incomplete to redirect to onboarding immediately
           const isIncomplete = !userData.age || userData.age === 0 || !userData.city || !userData.gender;
           if (isIncomplete) {
@@ -147,8 +147,8 @@ const Signup = () => {
       const res = await api.post('/auth/google', { credential: credentialResponse.credential });
       if (res.data.success) {
         toast.success(res.data.isNewUser ? 'Account created with Google!' : 'Welcome back!');
-        const userData = res.data.user;
-        setUser(userData);
+        const { user: userData, token } = res.data;
+        setUser(userData, token);
         
         // Immediate redirection check for onboarding
         const isIncomplete = !userData.age || userData.age === 0 || !userData.city || !userData.gender;

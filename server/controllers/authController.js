@@ -57,8 +57,8 @@ export const register = async (req, res) => {
 
         res.cookie('token', token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production', 
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
+          secure: true, 
+          sameSite: 'none', 
           maxAge: 7 * 24 * 60 * 60 * 1000, 
         });
 
@@ -74,7 +74,7 @@ export const register = async (req, res) => {
           averageRating: existingUser.averageRating || 0,
           totalRatings: existingUser.totalRatings || 0,
         };
-        return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser });
+        return res.status(201).json({ success: true, message: 'Registration successful', user: newSafeUser, token });
       }
 
       return res.status(400).json({ success: false, message: 'Please verify your email via OTP first' });
@@ -126,8 +126,8 @@ export const login = async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', 
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
+            secure: true, 
+            sameSite: 'none', 
             maxAge,
         });
 
@@ -144,8 +144,8 @@ export const login = async (req, res) => {
             totalRatings: user.totalRatings || 0,
         };
 
-        // ⚡ SECURITY: Token is now handled exclusively via HttpOnly cookies for web
-        return res.status(200).json({ success: true, message: 'Login successful', user: safeUser });
+        // ⚡ SECURITY: Token is now handled primarily via HttpOnly cookies, with header fallback support
+        return res.status(200).json({ success: true, message: 'Login successful', user: safeUser, token });
 
     } catch (error) {
         console.error('Login error:', error);
@@ -446,8 +446,8 @@ export const googleAuth = async (req, res) => {
 
     res.cookie('token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', 
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
+        secure: true, 
+        sameSite: 'none', 
         maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
 
@@ -468,6 +468,7 @@ export const googleAuth = async (req, res) => {
       success: true,
       message: isNewUser ? 'Account created with Google!' : 'Welcome back!',
       user: safeUser,
+      token,
       isNewUser,
     });
   } catch (error) {

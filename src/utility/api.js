@@ -6,9 +6,13 @@ const api = axios.create({
   withCredentials: true, // ⚡ SECURITY: Replaces manual token injection with secure HttpOnly cookies
 });
 
-// We no longer manually inject the token into headers. 
-// The browser handles sending the 'token' cookie automatically with each request.
+// We primarily use HttpOnly cookies, but we provide an Authorization header fallback 
+// to ensure production functionality when browser cookie policies are strict.
 api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 }, (error) => {
   return Promise.reject(error);
