@@ -32,6 +32,9 @@ import './models/userModel.js';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Enable trust proxy to get correct client IP behind Vercel/proxies
+app.set('trust proxy', 1);
+
 // Connect to database
 connectDB();
 

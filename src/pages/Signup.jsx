@@ -96,10 +96,12 @@ const Signup = () => {
         toast.success("Email verified successfully!");
       } else {
         toast.error(verifyRes.data.message || 'OTP verification failed');
+        setOtp(['', '', '', '', '', '']); // Clear OTP on failure
       }
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || 'Invalid or expired OTP.');
+      setOtp(['', '', '', '', '', '']); // Clear OTP on error
     } finally {
       setLoading(false);
     }

@@ -51,9 +51,11 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
         setStep('reset');
       } else {
         toast.error(res.data.message || 'Invalid or expired OTP');
+        setOtp('');
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid OTP');
+      setOtp('');
     } finally {
       setLoading(false);
     }
@@ -72,9 +74,13 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
         onClose();
       } else {
         toast.error(res.data.message || 'Failed to reset password');
+        setOtp('');
+        setStep('otp'); // Go back to OTP step if password reset fails due to OTP issues
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Server error');
+      setOtp('');
+      setStep('otp');
     } finally {
       setLoading(false);
     }

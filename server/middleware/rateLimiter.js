@@ -38,6 +38,7 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
   store: createStore('auth'),
   message: { success: false, message: 'Too many authentication attempts. Please try again in 15 minutes.' },
+  keyGenerator: (req) => req.body.email || req.ip,
 });
 
 // OTP brute-force protection
@@ -48,6 +49,7 @@ export const otpLimiter = rateLimit({
   legacyHeaders: false,
   store: createStore('otp'),
   message: { success: false, message: 'Too many OTP attempts. Please wait 10 minutes.' },
+  keyGenerator: (req) => req.body.email || req.ip,
 });
 
 // Payment limiter
