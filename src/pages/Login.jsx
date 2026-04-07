@@ -74,7 +74,10 @@ const Login = ({ onLogin }) => {
     }
   };
 
-  if (authLoading) return null;
+
+  // Remove the blocking loading check to ensure initial form visibility
+  // if (authLoading) return null;
+
 
   return (
     <>
